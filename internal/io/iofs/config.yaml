@@ -1,0 +1,29 @@
+# Application Configuration File
+#
+# This file contains persistent settings that can also be set via environment
+# variables. Uncomment and modify values as needed. All values below show the
+# built-in defaults.
+#
+# Configuration Precedence (highest to lowest):
+#   1. CLI flags (--log-level, etc.)
+#   2. Environment variables (GNABBR_LOG_LEVEL, etc.)
+#   3. This config file (~/.config/gnabbr/config.yaml)
+#   4. Built-in defaults (shown below)
+
+# Logging settings
+log:
+  # format: json                # Options: json, text, tint
+  # level: info                 # Options: debug, info, warn, error
+  # destination: file           # Options: file, stdout, stderr
+
+# General settings
+# jobs_number: 0                # 0 means use runtime.NumCPU()
+
+# Resolver settings
+# gnames_url: https://verifier.globalnames.org/api/v1/
+# gap_pages: 10                 # a larger page gap starts a new group
+# span_pages: 50                # the longest group, in pages
+# hint_window: 50               # pages back that give genus hints
+# hints_limit: 5                # genus hints per name
+# genera_limit: 5               # candidate genera per group
+# threshold: 0                  # lowest score of an accepted genus

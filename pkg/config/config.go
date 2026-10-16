@@ -1,0 +1,167 @@
+// Package config provides configuration management for the application.
+//
+// This package has no I/O dependencies (no file operations, no network calls).
+// Validation functions may write user-facing warnings via gn.Warn().
+//
+// # Configuration Sources
+//
+// Precedence (highest to lowest): CLI flags > env vars > config.yaml > defaults
+//
+// # Design Principles
+//
+// - Default config (from New()) is always valid - no validation needed
+// - All mutations go through Option functions - the only way to modify Config
+// - Invalid options are rejected with gn.Warn() - config remains in valid state
+// - ToOptions() converts persistent fields (those in config.yaml)
+// - Environment variables match ToOptions() fields exactly
+//
+// # Persistent vs Runtime Fields
+//
+// Persistent fields (in ToOptions, config.yaml, and env vars):
+//   - Log: level, format, destination
+//   - General: jobs_number
+//   - Resolver: gnames_url, gap_pages, span_pages, hint_window,
+//     hints_limit, genera_limit, threshold
+//
+// Runtime-only fields (CLI flags only):
+//   - HomeDir (set once at startup)
+//   - WithFeatures
+//
+// # Environment Variables
+//
+// Use GNABBR_ prefix with underscores for nesting:
+//
+//	GNABBR_LOG_LEVEL=info
+//	GNABBR_JOBS_NUMBER=8
+package config
+
+import (
+	"runtime"
+)
+
+// Config represents the complete application configuration.
+type Config struct {
+	// Log contains logging configuration.
+	Log LogConfig `mapstructure:"log" yaml:"log"`
+
+	// JobsNumber is the number of concurrent workers for parallel operations.
+	// Default value is set according to the number of available threads.
+	JobsNumber int `mapstructure:"jobs_number" yaml:"jobs_number"`
+
+	// GnamesURL is the gnames REST API that provides abbr_names.
+	GnamesURL string `mapstructure:"gnames_url" yaml:"gnames_url"`
+
+	// GapPages: a group of abbreviated names ends where the next name
+	// with the same abbreviation is more than GapPages pages away.
+	GapPages int `mapstructure:"gap_pages" yaml:"gap_pages"`
+
+	// SpanPages is the largest number of pages a group spans.
+	SpanPages int `mapstructure:"span_pages" yaml:"span_pages"`
+
+	// HintWindow is how many pages back full names give genus hints.
+	HintWindow int `mapstructure:"hint_window" yaml:"hint_window"`
+
+	// HintsLimit is the largest number of genus hints per name.
+	HintsLimit int `mapstructure:"hints_limit" yaml:"hints_limit"`
+
+	// GeneraLimit is the largest number of candidate genera abbr_names
+	// returns for a group.
+	GeneraLimit int `mapstructure:"genera_limit" yaml:"genera_limit"`
+
+	// Threshold is the lowest score of an accepted genus.
+	Threshold float64 `mapstructure:"threshold" yaml:"threshold"`
+
+	// WithFeatures asks abbr_names for raw score features (tuning).
+	WithFeatures bool
+
+	// HomeDir determines where config, cache and logs directories reside.
+	// It must be set by CLI during init, there is no default value for it.
+	HomeDir string
+}
+
+// LogConfig provides typical settings for application logs.
+type LogConfig struct {
+	// Format can be 'json', 'text' or 'tint' (user-facing and colored).
+	Format string `mapstructure:"format"      yaml:"format"`
+	// Level of logging -- 'error', 'warn', 'info', 'debug'
+	Level string `mapstructure:"level"       yaml:"level"`
+	// Destination can be a log file (to default place), STDERR or STDOUT
+	Destination string `mapstructure:"destination" yaml:"destination"`
+}
+
+// New creates a Config with sensible default values.
+// The returned config is always valid and ready to use.
+// Default values can be overridden using Option functions via Update().
+func New() *Config {
+	res := &Config{
+		Log: LogConfig{
+			Format:      "json",
+			Level:       "info",
+			Destination: "file",
+		},
+		JobsNumber:  runtime.NumCPU(), // Default to number of CPU threads
+		GnamesURL:   "https://verifier.globalnames.org/api/v1/",
+		GapPages:    10,
+		SpanPages:   50,
+		HintWindow:  50,
+		HintsLimit:  5,
+		GeneraLimit: 5,
+	}
+	return res
+}
+
+// Update applies configuration options.
+// This is the only way to modify Config after creation.
+// Invalid options are silently ignored (warnings via gn.Warn()).
+func (c *Config) Update(opts []Option) {
+	for _, opt := range opts {
+		opt(c)
+	}
+}
+
+// ToOptions converts the persistent configuration fields to Option functions.
+// Used for config.yaml round-trip (load from file, save to file).
+// Only includes fields that should be persisted in config.yaml.
+// Runtime-only fields (HomeDir) are excluded.
+func (c *Config) ToOptions() []Option {
+	var res []Option
+	var s string
+	var i int
+	s = c.Log.Format
+	if s != "" {
+		res = append(res, OptLogFormat(s))
+	}
+	s = c.Log.Level
+	if s != "" {
+		res = append(res, OptLogLevel(s))
+	}
+	s = c.Log.Destination
+	if s != "" {
+		res = append(res, OptLogDestination(s))
+	}
+
+	i = c.JobsNumber
+	if i > 0 {
+		res = append(res, OptJobsNumber(i))
+	}
+
+	if c.GnamesURL != "" {
+		res = append(res, OptGnamesURL(c.GnamesURL))
+	}
+	for _, v := range []struct {
+		i   int
+		opt func(int) Option
+	}{
+		{c.GapPages, OptGapPages},
+		{c.SpanPages, OptSpanPages},
+		{c.HintWindow, OptHintWindow},
+		{c.HintsLimit, OptHintsLimit},
+		{c.GeneraLimit, OptGeneraLimit},
+	} {
+		if v.i > 0 {
+			res = append(res, v.opt(v.i))
+		}
+	}
+	res = append(res, OptThreshold(c.Threshold))
+	return res
+}
