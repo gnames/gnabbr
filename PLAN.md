@@ -126,8 +126,9 @@ Name                            (mirrors gnfinder output.Name)
    (or the whole document), split where names are far apart.
 2. **Hint**: full names near an abbreviation suggest genera.
 3. **Reconcile** each group with gnames `abbr_names`, adding TaxonStats.
-4. **Split** a group without a genus into runs of names that share a
-   genus (see Mixed groups), and reconcile each run.
+4. **Split** a group into runs of names that share a genus when its
+   genus is missing or not the one its hints support (see Mixed
+   groups), and reconcile each run.
 5. **Accept** one best genus per group or run when its score reaches a
    threshold. A paper does not use the same abbreviation for two genera
    in one place.
@@ -163,7 +164,7 @@ These need structured hints in `abbr_names` (gnlib, gnames).
 
 - The reconciled name is the accepted genus with the epithets as written
   (`C. albus` -> *Carex albus*); the matched name is evidence, not a
-  replacement.
+  replacement. Only names the genus matched are expanded.
 - gnabbr gives expanded names of accepted groups. Callers verify them in
   one batch with their other names (bhlindex verifies each unique name
   string once), with the same settings.
@@ -211,23 +212,31 @@ names, ignoring one-name interruptions, 61% of these groups have runs
 of 3+ names of a genus, 26% runs of 2-3, and 12% alternate (checklists,
 indexes).
 
-So a group without a genus is split into runs:
+Groups that got a genus can be wrong the same way: in a small mixed
+group, a genus that matches all names by chance wins over the genus the
+text names (*Ficus* over *Formica* for `F. rufa`, *Cantharis* over
+*Cornus* for `C. sanguinea`). Such cases were most of the expanded
+names that disagreed with good labels in both plain and masked runs.
 
-1. Ask `abbr_names` again with `tolerance` 100 and more genera; give
-   each distinct name the best genus that matched it.
-2. Keep genera supported by hints: the genus is among the hints of one
-   of its names. Other genera are noise (OCR errors matching some genus
-   with the letter); their names stay as they were.
+So every group of two or more distinct names is checked against hints:
+
+1. Ask `abbr_names` again with `tolerance` 100 and more genera, so every
+   genus that matched a name comes back. Tolerance filters genera only;
+   scores do not change.
+2. A name gets the genus that matched it and is nearest among its own
+   hints. A name none of whose matching genera are among its hints gets
+   none (OCR errors matching some genus with the letter).
 3. In reading order, cut the group where the genus changes and the new
-   genus holds for at least two names. A single interrupting name is
-   left out of the run.
-4. If runs are shorter than two names on average, the genera alternate;
-   the group stays failed (per-name assignment can be tried later).
-5. Reconcile each run as a group of its own with the normal `tolerance`,
-   so its score is comparable with the threshold. Names left out of all
-   runs stay in the failed group.
+   genus holds for at least two names, or is the nearest hint of the
+   name. Other interrupting names are left out of the runs. When genera
+   alternate (checklists, indexes), few runs start.
+4. If the runs are one run of the group's genus, or there are none, the
+   group stays as it is.
+5. Otherwise reconcile each run as a group of its own with the normal
+   `tolerance`, so its score is comparable with the threshold. The
+   group keeps names left out of all runs, without a genus.
 
-This splits groups only; it does not detect sections. Groups that got a
-genus are not checked yet: up to 20% of their names may belong to
-another genus and are expanded with the group's genus; callers'
-verification rejects most such names.
+An accepted genus expands only the names it matched; its other names
+stay as they were (unmatched by the genus, 1% of expanded names with
+good labels agreed with them only 24% of the time). This splits groups
+only; it does not detect sections.

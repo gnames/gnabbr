@@ -1,7 +1,9 @@
 package gnabbr_test
 
 import (
+	"cmp"
 	"context"
+	"slices"
 	"strings"
 	"testing"
 
@@ -69,8 +71,11 @@ func TestResolve(t *testing.T) {
 	assert.Equal(5, out.AbbrNamesNum)
 	assert.Equal(3, out.ReconciledNum)
 
-	// The section comes first: two groups without hints fail.
-	require.Len(t, f.inputs, 3)
+	// The section comes first: two groups without hints fail. The last
+	// group has two distinct names, so it is also checked against hints
+	// with full tolerance.
+	require.Len(t, f.inputs, 4)
+	assert.Equal(100, *f.inputs[3].Tolerance)
 	assert.Equal("Rhabditida", f.inputs[0].MainTaxon)
 	assert.Equal("Chromadorea", f.inputs[2].DominantClass)
 
@@ -218,4 +223,126 @@ func TestResolveMixed(t *testing.T) {
 	require.Len(t, out.Failed, 1)
 	assert.False(out.Failed[0].Split)
 	assert.Equal([]string{"G. qqq,"}, out.Failed[0].Verbatims)
+}
+
+// tableNamer matches names with genera of a table by name. A genus
+// scores the number of names it matched, plus 0.5/position for each
+// matched name that has it among hints, as abbr_names weighs hints.
+// With the default tolerance it returns only genera that matched all
+// names.
+type tableNamer struct {
+	genera map[string][]string
+}
+
+func (f *tableNamer) AbbrNames(_ context.Context, inp abbr.Input) (abbr.Output, error) {
+	var order []string
+	matched := make(map[string][]abbr.MatchedName)
+	score := make(map[string]float64)
+	for _, n := range inp.Names {
+		for _, g := range f.genera[n.Name] {
+			if _, ok := matched[g]; !ok {
+				order = append(order, g)
+			}
+			matched[g] = append(matched[g], abbr.MatchedName{ID: n.ID, Name: n.Name})
+			score[g]++
+			if pos := slices.Index(n.GenusHints, g); pos >= 0 {
+				score[g] += 0.5 / float64(pos+1)
+			}
+		}
+	}
+	var res abbr.Output
+	for _, g := range order {
+		ms := matched[g]
+		if inp.Tolerance == nil && len(ms) < len(inp.Names) {
+			continue
+		}
+		res.Genera = append(res.Genera, abbr.Genus{
+			Name: g, Score: abbr.Score{Total: score[g]}, MatchedNames: ms,
+		})
+	}
+	slices.SortStableFunc(res.Genera, func(a, b abbr.Genus) int {
+		return cmp.Compare(b.Score.Total, a.Score.Total)
+	})
+	return res, nil
+}
+
+// A genus that matches all names by chance (Ficus) loses to the genus
+// that is the nearest hint of a name (Formica for `F. rufa`). A name
+// whose genus is not its nearest hint and does not hold for two names
+// stays as it was.
+func TestResolveUnsupportedGenus(t *testing.T) {
+	assert := assert.New(t)
+	f := &tableNamer{genera: map[string][]string{
+		"F. rufa":     {"Ficus", "Formica"},
+		"F. elastica": {"Ficus"},
+	}}
+	g := gnabbr.New(config.New(), f)
+
+	d := doc.Document{
+		Names: []doc.Name{
+			{Name: "Ficus carica", Start: 0},
+			{Name: "Formica rufa", Start: 50},
+			{Name: "F. rufa", Start: 100},
+			{Name: "F. elastica", Start: 150},
+		},
+	}
+	out, err := g.Resolve(context.Background(), d)
+	require.NoError(t, err)
+
+	require.Len(t, out.Reconciled, 1)
+	r := out.Reconciled[0]
+	assert.True(r.Split)
+	assert.Equal("Formica", r.Genus.Name)
+	require.Len(t, r.Names, 1)
+	assert.Equal("Formica rufa", r.Names[0].Name)
+
+	require.Len(t, out.Failed, 1)
+	assert.Equal("Ficus", out.Failed[0].Genus.Name)
+	assert.Equal([]string{"F. elastica"}, out.Failed[0].Verbatims)
+}
+
+// An accepted genus expands only the names it matched; the others stay
+// as they were and are listed as verbatims of the group.
+func TestResolveUnmatchedNames(t *testing.T) {
+	assert := assert.New(t)
+	f := &tableNamer{genera: map[string][]string{
+		"C. alba":  {"Carex"},
+		"C. nigra": {"Carex"},
+	}}
+	cfg := config.New()
+	cfg.Update([]config.Option{config.OptThreshold(-1)})
+	f2 := &partialNamer{f}
+	g := gnabbr.New(cfg, f2)
+
+	d := doc.Document{
+		Names: []doc.Name{
+			{Name: "Carex alba", Start: 0},
+			{Name: "C. alba", Start: 100},
+			{Name: "C. nigra", Start: 200},
+			{Name: "C. qqq", Verbatim: "C. qqq.", Start: 300},
+		},
+	}
+	out, err := g.Resolve(context.Background(), d)
+	require.NoError(t, err)
+	require.Len(t, out.Reconciled, 1)
+	r := out.Reconciled[0]
+	assert.False(r.Split)
+	assert.Equal("Carex", r.Genus.Name)
+	assert.Len(r.Names, 2)
+	assert.Equal([]string{"C. qqq."}, r.Verbatims)
+	assert.Empty(out.Failed)
+}
+
+// partialNamer is a tableNamer that keeps a genus with one unmatched
+// name, like the default tolerance of abbr_names for groups of 5+ names.
+type partialNamer struct {
+	*tableNamer
+}
+
+func (f *partialNamer) AbbrNames(ctx context.Context, inp abbr.Input) (abbr.Output, error) {
+	all := 100
+	if inp.Tolerance == nil {
+		inp.Tolerance = &all
+	}
+	return f.tableNamer.AbbrNames(ctx, inp)
 }

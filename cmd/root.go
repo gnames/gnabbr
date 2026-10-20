@@ -153,6 +153,10 @@ func runRoot(cmd *cobra.Command, args []string) error {
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
+		// Cobra is silenced (SilenceErrors), so errors of commands are
+		// reported here: on STDERR, so STDOUT keeps only results.
+		slog.Error("Command failed", "error", err)
+		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
 	}
 }

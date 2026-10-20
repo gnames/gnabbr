@@ -121,9 +121,12 @@ func scopes(names []doc.Name, secs []doc.Section) []scope {
 	return res
 }
 
-// reconcile sends a group to abbr_names. A group without a genus is
-// split into runs of names that share a genus, and each run is
-// reconciled too; the group keeps only names left out of the runs.
+// reconcile sends a group to abbr_names, then checks it against hints
+// (see segment). The group stays as it is if its runs agree with its
+// genus. Otherwise (no genus, several genera, or a genus that hints do
+// not support while another one is) each run is reconciled as a group
+// of its own, and the group keeps only names left out of the runs,
+// without a genus.
 func (g *gnabbr) reconcile(
 	ctx context.Context,
 	names []doc.Name,
@@ -132,22 +135,37 @@ func (g *gnabbr) reconcile(
 	st stats.Stats,
 ) ([]candidate, error) {
 	c, err := g.ask(ctx, names, gr, hs, st, nil, g.cfg.GeneraLimit)
-	if err != nil || c.genus != nil {
-		return []candidate{c}, err
+	if err != nil {
+		return nil, err
 	}
-	runs, err := g.split(ctx, names, gr, hs, st)
-	if err != nil || len(runs) == 0 {
-		return []candidate{c}, err
+	if uniq, _, _ := distinct(names, gr, hs); len(uniq) < 2 {
+		return []candidate{c}, nil
 	}
+	rs, err := g.segment(ctx, names, gr, hs, st)
+	if err != nil {
+		return nil, err
+	}
+	if len(rs) == 0 || (c.genus != nil && len(rs) == 1 && rs[0].genus == c.genus.Name) {
+		return []candidate{c}, nil
+	}
+
+	res := []candidate{c}
 	inRuns := make(map[int]bool)
-	for _, r := range runs {
+	for _, r := range rs {
+		rc, err := g.ask(ctx, names, r.group, hs, st, nil, g.cfg.GeneraLimit)
+		if err != nil {
+			return nil, err
+		}
+		rc.split = true
+		res = append(res, rc)
 		for _, i := range r.group.Members {
 			inRuns[i] = true
 		}
 	}
-	c.group.Members = slices.DeleteFunc(slices.Clone(c.group.Members),
+	res[0].accepted = false
+	res[0].group.Members = slices.DeleteFunc(slices.Clone(c.group.Members),
 		func(i int) bool { return inRuns[i] })
-	return append([]candidate{c}, runs...), nil
+	return res, nil
 }
 
 // distinct returns distinct names of a group by first occurrence, with
@@ -228,7 +246,9 @@ func (g *gnabbr) ask(
 	return res, nil
 }
 
-// output makes reconciled and failed groups. A name in several sections
+// output makes reconciled and failed groups. A name is expanded only by
+// an accepted group whose genus matched it; names of a group that stay
+// as they were are listed as its verbatims. A name in several sections
 // is in several groups: it is expanded by the accepted group with the
 // best score and is left out of the others.
 func (g *gnabbr) output(d doc.Document, names []doc.Name, cands []candidate) Output {
@@ -237,7 +257,14 @@ func (g *gnabbr) output(d doc.Document, names []doc.Name, cands []candidate) Out
 		if !c.accepted {
 			continue
 		}
+		matched := make(map[string]bool)
+		for _, m := range c.genus.MatchedNames {
+			matched[m.Name] = true
+		}
 		for _, i := range c.group.Members {
+			if !matched[names[i].Name] {
+				continue
+			}
 			if b, ok := best[i]; !ok || c.genus.Score.Total > cands[b].genus.Score.Total {
 				best[i] = ci
 			}
@@ -269,7 +296,7 @@ func (g *gnabbr) output(d doc.Document, names []doc.Name, cands []candidate) Out
 			n := names[i]
 			b, ok := best[i]
 			switch {
-			case c.accepted && ok && b == ci:
+			case ok && b == ci:
 				gr.Names = append(gr.Names, Name{
 					ID:       n.ID,
 					Verbatim: n.Verbatim,
@@ -277,7 +304,7 @@ func (g *gnabbr) output(d doc.Document, names []doc.Name, cands []candidate) Out
 					AbbrName: n.Name,
 					Start:    n.Start,
 				})
-			case !c.accepted && !ok:
+			case !ok:
 				v := cmp.Or(n.Verbatim, n.Name)
 				if !slices.Contains(gr.Verbatims, v) {
 					gr.Verbatims = append(gr.Verbatims, v)

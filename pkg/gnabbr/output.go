@@ -72,7 +72,8 @@ type Group struct {
 	TaxonStats TaxonStats `json:"taxonStats"`
 
 	// Split is true for a run of names that share a genus, cut out of a
-	// group that got no genus as a whole (a mixed group).
+	// group whose genus, if any, its hints did not support as a whole (a
+	// mixed group).
 	Split bool `json:"split,omitempty"`
 
 	// Hints are the genus hints of the group, nearest first.
@@ -87,7 +88,9 @@ type Group struct {
 	// Names are the expanded names (Reconciled groups only).
 	Names []Name `json:"names,omitempty"`
 
-	// Verbatims are distinct verbatims (Failed groups only).
+	// Verbatims are distinct verbatims of the group's names that stay as
+	// they were: all names of a Failed group, names of a Reconciled group
+	// its genus did not match.
 	Verbatims []string `json:"verbatims,omitempty"`
 
 	// Details are raw abbr_names input and output (WithDetails).
