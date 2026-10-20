@@ -137,8 +137,13 @@ Name                            (mirrors gnfinder output.Name)
 
 First run, with the current `abbr_names` API:
 
-- Genera of full multinomials and full uninomials before the
-  abbreviation, in the same section, nearest first.
+- Full names before the abbreviation, in the same section, nearest
+  first: for each of the nearest genera starting with the abbreviation
+  its nearest multinomial (`Carex nigra`), or the genus for a
+  uninomial, and its names with the abbreviation's epithet (`Carex
+  alba` for `C. alba`). `abbr_names` counts positions by distinct
+  genera and weighs a name hint 1.5 times a genus hint, 2 times with
+  the same epithet.
 - Hints are merged per group, so a hint before the first name of a group
   helps all its names.
 - gnabbr collects hints; gnames `abbr_names` weighs them.
@@ -154,8 +159,7 @@ and opportunities:
 
 - Hints after the abbreviation (e.g. a footnote at the bottom of the
   page), as weaker evidence.
-- Distance of each hint, and whether its epithet matches the abbreviated
-  one (`Carex nigra` ... `C. nigra`).
+- Distance of each hint.
 - Hints from the rest of the document as a weaker fallback.
 
 These need structured hints in `abbr_names` (gnlib, gnames).

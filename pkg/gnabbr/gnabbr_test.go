@@ -10,6 +10,7 @@ import (
 	"github.com/gnames/gnabbr/pkg/config"
 	"github.com/gnames/gnabbr/pkg/doc"
 	"github.com/gnames/gnabbr/pkg/gnabbr"
+	"github.com/gnames/gnabbr/pkg/hints"
 	"github.com/gnames/gnlib/ent/abbr"
 	"github.com/gnames/gnstats/ent/stats"
 	"github.com/stretchr/testify/assert"
@@ -29,7 +30,7 @@ func (f *fakeNamer) AbbrNames(_ context.Context, inp abbr.Input) (abbr.Output, e
 	if len(hs) == 0 {
 		return abbr.Output{}, nil
 	}
-	gen := abbr.Genus{Name: hs[0], Score: abbr.Score{Total: float64(len(inp.Names))}}
+	gen := abbr.Genus{Name: hints.Genus(hs[0]), Score: abbr.Score{Total: float64(len(inp.Names))}}
 	for _, n := range inp.Names {
 		gen.MatchedNames = append(gen.MatchedNames, abbr.MatchedName{ID: n.ID, Name: n.Name})
 	}
@@ -84,7 +85,7 @@ func TestResolve(t *testing.T) {
 	require.Len(t, in.Names, 2)
 	assert.Equal("C. elegans", in.Names[0].Name)
 	assert.Equal("C. briggsae", in.Names[1].Name)
-	assert.Equal([]string{"Caenorhabditis"}, in.Names[1].GenusHints)
+	assert.Equal([]string{"Caenorhabditis elegans"}, in.Names[1].GenusHints)
 
 	require.Len(t, out.Reconciled, 1)
 	r := out.Reconciled[0]
@@ -163,7 +164,7 @@ func (f *mixedNamer) AbbrNames(_ context.Context, inp abbr.Input) (abbr.Output, 
 		if len(n.GenusHints) == 0 || strings.Contains(n.Name, "qqq") {
 			continue
 		}
-		g := n.GenusHints[0]
+		g := hints.Genus(n.GenusHints[0])
 		if _, ok := matched[g]; !ok {
 			order = append(order, g)
 		}
@@ -245,7 +246,7 @@ func (f *tableNamer) AbbrNames(_ context.Context, inp abbr.Input) (abbr.Output, 
 			}
 			matched[g] = append(matched[g], abbr.MatchedName{ID: n.ID, Name: n.Name})
 			score[g]++
-			if pos := slices.Index(n.GenusHints, g); pos >= 0 {
+			if pos := slices.Index(hints.Genera(n.GenusHints), g); pos >= 0 {
 				score[g] += 0.5 / float64(pos+1)
 			}
 		}

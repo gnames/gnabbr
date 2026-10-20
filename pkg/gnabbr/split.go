@@ -76,9 +76,9 @@ func (g *gnabbr) segment(
 	}
 	chosen := make(map[string]choice)
 	for _, n := range uniq {
-		for k, h := range hints.Merge(g.cfg.HintsLimit, own[n]...) {
-			if matched[n][h] {
-				chosen[n] = choice{genus: h, strong: k == 0}
+		for k, gen := range hints.Genera(hints.Merge(g.cfg.HintsLimit, own[n]...)) {
+			if matched[n][gen] {
+				chosen[n] = choice{genus: gen, strong: k == 0}
 				break
 			}
 		}

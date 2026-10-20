@@ -76,7 +76,8 @@ type Group struct {
 	// mixed group).
 	Split bool `json:"split,omitempty"`
 
-	// Hints are the genus hints of the group, nearest first.
+	// Hints are the hints of the group, nearest first: full names, or
+	// genera for uninomials.
 	Hints []string `json:"hints,omitempty"`
 
 	// Genus is the best candidate genus, nil if there is none.
