@@ -71,6 +71,10 @@ type Group struct {
 	// TaxonStats sent to abbr_names.
 	TaxonStats TaxonStats `json:"taxonStats"`
 
+	// Split is true for a run of names that share a genus, cut out of a
+	// group that got no genus as a whole (a mixed group).
+	Split bool `json:"split,omitempty"`
+
 	// Hints are the genus hints of the group, nearest first.
 	Hints []string `json:"hints,omitempty"`
 

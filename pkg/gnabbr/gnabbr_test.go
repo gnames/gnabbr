@@ -2,6 +2,7 @@ package gnabbr_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/gnames/gnabbr/pkg/config"
@@ -139,4 +140,82 @@ func TestResolveOverlap(t *testing.T) {
 	assert.Equal("Cyperus", b.Genus.Name)
 	require.Len(t, b.Names, 1)
 	assert.Equal("Cyperus fuscus", b.Names[0].Name)
+}
+
+// mixedNamer matches a name with the genus of its first hint; names with
+// `qqq` match nothing. With the default tolerance it returns a genus
+// only if it matches all names; with tolerance 100 it returns every
+// genus with its names.
+type mixedNamer struct {
+	inputs []abbr.Input
+}
+
+func (f *mixedNamer) AbbrNames(_ context.Context, inp abbr.Input) (abbr.Output, error) {
+	f.inputs = append(f.inputs, inp)
+	var order []string
+	matched := make(map[string][]abbr.MatchedName)
+	for _, n := range inp.Names {
+		if len(n.GenusHints) == 0 || strings.Contains(n.Name, "qqq") {
+			continue
+		}
+		g := n.GenusHints[0]
+		if _, ok := matched[g]; !ok {
+			order = append(order, g)
+		}
+		matched[g] = append(matched[g], abbr.MatchedName{ID: n.ID, Name: n.Name})
+	}
+	var res abbr.Output
+	for _, g := range order {
+		ms := matched[g]
+		if inp.Tolerance == nil && len(ms) < len(inp.Names) {
+			continue
+		}
+		res.Genera = append(res.Genera, abbr.Genus{
+			Name: g, Score: abbr.Score{Total: float64(len(ms))}, MatchedNames: ms,
+		})
+	}
+	return res, nil
+}
+
+func TestResolveMixed(t *testing.T) {
+	assert := assert.New(t)
+	f := &mixedNamer{}
+	g := gnabbr.New(config.New(), f)
+
+	d := doc.Document{
+		Names: []doc.Name{
+			{Name: "Gastrophilus intestinalis", Start: 0},
+			{Name: "G. nasalis", Start: 100},
+			{Name: "G. pecorum", Start: 200},
+			{Name: "Glossina palpalis", Start: 300},
+			{Name: "G. morsitans", Start: 400},
+			{Name: "G. qqq", Verbatim: "G. qqq,", Start: 450},
+			{Name: "G. palpalis", Start: 500},
+		},
+	}
+	out, err := g.Resolve(context.Background(), d)
+	require.NoError(t, err)
+
+	// The group, the group with full tolerance, and two runs.
+	require.Len(t, f.inputs, 4)
+	assert.Nil(f.inputs[0].Tolerance)
+	assert.Equal(100, *f.inputs[1].Tolerance)
+
+	require.Len(t, out.Reconciled, 2)
+	a, b := out.Reconciled[0], out.Reconciled[1]
+	assert.True(a.Split)
+	assert.Equal("Gastrophilus", a.Genus.Name)
+	assert.Equal(100, a.Start)
+	assert.Equal(200, a.End)
+	require.Len(t, a.Names, 2)
+	assert.Equal("Gastrophilus nasalis", a.Names[0].Name)
+	assert.Equal("Glossina", b.Genus.Name)
+	require.Len(t, b.Names, 2)
+	assert.Equal("Glossina morsitans", b.Names[0].Name)
+	assert.Equal(4, out.ReconciledNum)
+
+	// The name left out of the runs stays in the failed group.
+	require.Len(t, out.Failed, 1)
+	assert.False(out.Failed[0].Split)
+	assert.Equal([]string{"G. qqq,"}, out.Failed[0].Verbatims)
 }

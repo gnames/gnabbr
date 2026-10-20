@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gnames/gnabbr/internal/iognames"
+	"github.com/gnames/gnabbr/pkg/abbrname"
 	"github.com/gnames/gnabbr/pkg/config"
 	"github.com/gnames/gnabbr/pkg/gnabbr"
 )
@@ -56,6 +57,15 @@ type Outcome struct {
 	Genus        string  `json:"genus,omitempty"`
 	Score        float64 `json:"score"`
 	Group        int     `json:"group"`
+
+	// Split is true if the name was expanded by a run of a split mixed
+	// group.
+	Split bool `json:"split,omitempty"`
+
+	// Status is `expanded`, `not abbreviated` (gnabbr does not see the
+	// name as abbreviated) or `no genus` (abbr_names found no genus for
+	// its group).
+	Status string `json:"status"`
 }
 
 // Run reconciles the items of a split and returns outcomes of their
@@ -160,12 +170,18 @@ func runItem(
 		genus string
 		score float64
 		group int
+		split bool
 	}
 	exp := make(map[string]expanded)
 	for _, g := range out.Reconciled {
 		for _, n := range g.Names {
-			exp[n.ID] = expanded{g.Genus.Name, g.Genus.Score.Total, g.Index}
+			exp[n.ID] = expanded{g.Genus.Name, g.Genus.Score.Total, g.Index, g.Split}
 		}
+	}
+
+	names := make(map[string]string, len(d.Names))
+	for _, n := range d.Names {
+		names[n.ID] = n.Name
 	}
 
 	w := it.Weight
@@ -181,8 +197,17 @@ func runItem(
 		if l.Genus != nil {
 			o.Label = *l.Genus
 		}
-		if e, ok := exp[strconv.Itoa(l.OccurrenceID)]; ok {
-			o.Genus, o.Score, o.Group = e.genus, e.score, e.group
+		id := strconv.Itoa(l.OccurrenceID)
+		e, ok := exp[id]
+		_, abbr := abbrname.Parse(names[id])
+		switch {
+		case ok:
+			o.Genus, o.Score, o.Group, o.Split = e.genus, e.score, e.group, e.split
+			o.Status = "expanded"
+		case !abbr:
+			o.Status = "not abbreviated"
+		default:
+			o.Status = "no genus"
 		}
 		res = append(res, o)
 	}

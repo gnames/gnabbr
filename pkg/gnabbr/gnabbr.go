@@ -41,6 +41,8 @@ type candidate struct {
 	details  Details
 	genus    *abbr.Genus
 	accepted bool
+	// split is true for a run of a split mixed group.
+	split bool
 }
 
 // Resolve implements GNabbr.
@@ -63,12 +65,14 @@ func (g *gnabbr) Resolve(ctx context.Context, d doc.Document) (Output, error) {
 		hs := hints.New(names, scope, g.cfg.HintWindow, g.cfg.HintsLimit)
 		gs := group.New(names, scope, sec, g.cfg.GapChars, g.cfg.SpanChars)
 		for _, gr := range gs {
-			c, err := g.reconcile(ctx, names, gr, hs, st)
+			cs, err := g.reconcile(ctx, names, gr, hs, st)
 			if err != nil {
 				return Output{}, err
 			}
-			c.index = len(cands)
-			cands = append(cands, c)
+			for _, c := range cs {
+				c.index = len(cands)
+				cands = append(cands, c)
+			}
 		}
 	}
 
@@ -117,16 +121,42 @@ func scopes(names []doc.Name, secs []doc.Section) []scope {
 	return res
 }
 
-// reconcile sends a group to abbr_names. Each distinct name string goes
-// once, with hints of all its occurrences and of the rest of the group.
+// reconcile sends a group to abbr_names. A group without a genus is
+// split into runs of names that share a genus, and each run is
+// reconciled too; the group keeps only names left out of the runs.
 func (g *gnabbr) reconcile(
 	ctx context.Context,
 	names []doc.Name,
 	gr group.Group,
 	hs map[int][]string,
 	st stats.Stats,
-) (candidate, error) {
-	limit := g.cfg.HintsLimit
+) ([]candidate, error) {
+	c, err := g.ask(ctx, names, gr, hs, st, nil, g.cfg.GeneraLimit)
+	if err != nil || c.genus != nil {
+		return []candidate{c}, err
+	}
+	runs, err := g.split(ctx, names, gr, hs, st)
+	if err != nil || len(runs) == 0 {
+		return []candidate{c}, err
+	}
+	inRuns := make(map[int]bool)
+	for _, r := range runs {
+		for _, i := range r.group.Members {
+			inRuns[i] = true
+		}
+	}
+	c.group.Members = slices.DeleteFunc(slices.Clone(c.group.Members),
+		func(i int) bool { return inRuns[i] })
+	return append([]candidate{c}, runs...), nil
+}
+
+// distinct returns distinct names of a group by first occurrence, with
+// hints of each occurrence of a name, and hints of all occurrences.
+func distinct(
+	names []doc.Name,
+	gr group.Group,
+	hs map[int][]string,
+) ([]string, map[string][][]string, [][]string) {
 	var uniq []string
 	own := make(map[string][][]string)
 	var all [][]string
@@ -139,6 +169,23 @@ func (g *gnabbr) reconcile(
 		own[n] = append(own[n], hs[i])
 		all = append(all, hs[i])
 	}
+	return uniq, own, all
+}
+
+// ask sends a group to abbr_names. Each distinct name string goes once,
+// with hints of all its occurrences and of the rest of the group. A nil
+// tolerance means the default of abbr_names.
+func (g *gnabbr) ask(
+	ctx context.Context,
+	names []doc.Name,
+	gr group.Group,
+	hs map[int][]string,
+	st stats.Stats,
+	tolerance *int,
+	generaLimit int,
+) (candidate, error) {
+	limit := g.cfg.HintsLimit
+	uniq, own, all := distinct(names, gr, hs)
 	groupHints := hints.Merge(limit, all...)
 
 	res := candidate{
@@ -153,7 +200,8 @@ func (g *gnabbr) reconcile(
 		Names:         make([]abbr.Name, len(uniq)),
 		MainTaxon:     res.stats.MainTaxon,
 		DominantClass: res.stats.DominantClass,
-		GeneraLimit:   g.cfg.GeneraLimit,
+		Tolerance:     tolerance,
+		GeneraLimit:   generaLimit,
 		WithFeatures:  g.cfg.WithFeatures,
 	}
 	for j, n := range uniq {
@@ -256,6 +304,7 @@ func (g *gnabbr) group(d doc.Document, c candidate) Group {
 		TaxonStats: c.stats,
 		Hints:      c.hints,
 		Genus:      c.genus,
+		Split:      c.split,
 	}
 	if s := c.group.Section; s >= 0 {
 		res.Section = cmp.Or(d.Sections[s].ID, strconv.Itoa(s))
