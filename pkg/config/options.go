@@ -1,10 +1,9 @@
 package config
 
 import (
+	"log/slog"
 	"slices"
 	"strings"
-
-	"github.com/gnames/gn"
 )
 
 // Option is a function that modifies Config.
@@ -57,25 +56,25 @@ func OptGnamesURL(s string) Option {
 	}
 }
 
-// OptGapPages sets the page gap that splits groups.
-func OptGapPages(i int) Option {
+// OptGapChars sets the gap in runes that splits groups.
+func OptGapChars(i int) Option {
 	return func(c *Config) {
-		if isValidInt("Gap Pages", i) {
-			c.GapPages = i
+		if isValidInt("Gap Chars", i) {
+			c.GapChars = i
 		}
 	}
 }
 
-// OptSpanPages sets the largest number of pages in a group.
-func OptSpanPages(i int) Option {
+// OptSpanChars sets the largest number of runes in a group.
+func OptSpanChars(i int) Option {
 	return func(c *Config) {
-		if isValidInt("Span Pages", i) {
-			c.SpanPages = i
+		if isValidInt("Span Chars", i) {
+			c.SpanChars = i
 		}
 	}
 }
 
-// OptHintWindow sets how many pages back genus hints come from.
+// OptHintWindow sets how many runes back genus hints come from.
 func OptHintWindow(i int) Option {
 	return func(c *Config) {
 		if isValidInt("Hint Window", i) {
@@ -117,6 +116,14 @@ func OptWithFeatures(b bool) Option {
 	}
 }
 
+// OptWithDetails adds raw abbr_names input and output to the groups.
+// Runtime-only field - not in ToOptions().
+func OptWithDetails(b bool) Option {
+	return func(c *Config) {
+		c.WithDetails = b
+	}
+}
+
 // OptHomeDir sets the home directory for config, cache, and log locations.
 // Set once at startup from os.UserHomeDir().
 // Runtime-only field - not in ToOptions().
@@ -133,7 +140,7 @@ func OptHomeDir(s string) Option {
 
 func isValidString(name, value string) bool {
 	if value == "" {
-		gn.Warn("%s cannot be empty", name)
+		slog.Warn("Option rejected: value cannot be empty", "option", name)
 		return false
 	}
 	return true
@@ -141,7 +148,8 @@ func isValidString(name, value string) bool {
 
 func isValidInt(name string, value int) bool {
 	if value < 0 {
-		gn.Warn("%s must be non-negative, got %d", name, value)
+		slog.Warn("Option rejected: value must be non-negative",
+			"option", name, "value", value)
 		return false
 	}
 	return true
@@ -151,6 +159,7 @@ func isValidEnum(name, value string, allowed []string) bool {
 	if slices.Contains(allowed, value) {
 		return true
 	}
-	gn.Warn("%s must be one of %v, got '%s'", name, allowed, value)
+	slog.Warn("Option rejected: value is not allowed",
+		"option", name, "value", value, "allowed", allowed)
 	return false
 }

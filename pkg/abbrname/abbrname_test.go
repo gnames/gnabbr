@@ -32,6 +32,13 @@ func TestParse(t *testing.T) {
 	}
 }
 
+func TestExpand(t *testing.T) {
+	assert := assert.New(t)
+	assert.Equal("Carex alba", abbrname.Expand("C. alba", "Carex"))
+	assert.Equal("Carex alba var. nigra L.",
+		abbrname.Expand("C.  alba var. nigra L.", "Carex"))
+}
+
 func TestGenus(t *testing.T) {
 	assert := assert.New(t)
 	tests := []struct{ name, genus string }{

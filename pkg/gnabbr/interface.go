@@ -7,12 +7,13 @@ import (
 	"github.com/gnames/gnlib/ent/abbr"
 )
 
-// GNabbr resolves abbreviated genera of scientific names (`C. elegans`)
-// found in a document.
+// GNabbr reconciles abbreviated genera of scientific names
+// (`C. elegans`) found in a document.
 type GNabbr interface {
-	// Resolve groups abbreviated names of a document, sends each group
-	// to gnames abbr_names and returns the best genus for every
-	// abbreviated occurrence.
+	// Resolve groups abbreviated names of a document by section,
+	// abbreviation and distance, sends each group to gnames abbr_names
+	// with genus hints and TaxonStats, and returns groups with an
+	// accepted genus and their expanded names, and failed groups.
 	Resolve(ctx context.Context, d doc.Document) (Output, error)
 }
 

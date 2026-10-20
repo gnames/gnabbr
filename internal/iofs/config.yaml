@@ -21,9 +21,9 @@ log:
 
 # Resolver settings
 # gnames_url: https://verifier.globalnames.org/api/v1/
-# gap_pages: 10                 # a larger page gap starts a new group
-# span_pages: 50                # the longest group, in pages
-# hint_window: 50               # pages back that give genus hints
+# gap_chars: 25000              # a larger gap in runes starts a new group
+# span_chars: 125000            # the longest group, in runes
+# hint_window: 125000           # runes back that give genus hints
 # hints_limit: 5                # genus hints per name
 # genera_limit: 5               # candidate genera per group
 # threshold: 0                  # lowest score of an accepted genus

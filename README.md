@@ -12,14 +12,18 @@ Status: early development.
 1. **Find** names with an abbreviated genus: a capital letter with up to
    two lowercase letters and a period, then an epithet (`C. alba`,
    `Cae. alba`).
-2. **Group** them locally: the same abbreviation in the same part
-   (article) of the document, split where pages are far apart. Names in
-   a group usually share a genus.
+2. **Group** them locally: the same abbreviation in the same section
+   (article, chapter) of the document, split where names are far apart
+   (in characters). Names in a group usually share a genus; a repeated
+   name is reconciled once per group.
 3. **Hint**: full names mentioned shortly before (`Carex nigra`) give
    genera the abbreviation may stand for.
-4. **Resolve** each group with [gnames] `abbr_names`, adding the
-   taxonomic context of the part (dominant class, main taxon).
-5. **Accept** the best genus when its score reaches a threshold.
+4. **Reconcile** each group with [gnames] `abbr_names`, adding the
+   taxonomic statistics of the section or the document (main taxon,
+   dominant class), given by the caller.
+5. **Accept** the best genus when its score reaches a threshold, and
+   expand the group's names with it (`C. alba` -> `Carex alba`).
+   Callers verify expanded names with their other names.
 
 ## Library
 
@@ -33,11 +37,14 @@ import (
 ga := gnabbr.New(config.OptGnamesURL("http://localhost:8888/api/v1/"))
 out, err := ga.Resolve(ctx, doc.Document{
 	ID: "item-1",
-	Occurrences: []doc.Occurrence{
-		{ID: "1", Name: "Caenorhabditis elegans", Page: 1},
-		{ID: "2", Name: "C. briggsae", Page: 2},
+	Names: []doc.Name{
+		{ID: "1", Name: "Caenorhabditis elegans", Start: 0},
+		{ID: "2", Name: "C. briggsae", Start: 2400},
 	},
+	TaxonStats: taxonStats, // gnstats stats.Stats of the document
 })
+// out.Reconciled: groups with an accepted genus and expanded names;
+// out.Failed: groups without one, with their verbatims.
 ```
 
 Callers do not deal with gnames: the root package `gnabbr` joins the
@@ -52,7 +59,8 @@ just install
 printf '1\tCarex alba\n2\tC. nigra\n' | gnabbr resolve -u http://localhost:8888/api/v1/
 ```
 
-A line is a name or `page<TAB>name`. Settings are in
+The input is a JSON document (see `pkg/doc`) or one name per line;
+with lines, the offset of a name is the offset of its line. Settings are in
 `~/.config/gnabbr/config.yaml` or `GNABBR_*` environment variables.
 
 ## Layout

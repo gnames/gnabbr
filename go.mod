@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	github.com/gnames/gn v0.1.3
 	github.com/gnames/gnlib v0.69.0
+	github.com/gnames/gnstats v0.2.2
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1

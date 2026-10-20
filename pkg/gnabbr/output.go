@@ -1,48 +1,122 @@
 package gnabbr
 
 import (
-	"github.com/gnames/gnabbr/pkg/group"
 	"github.com/gnames/gnlib/ent/abbr"
 )
 
-// Output is the result of resolving a document.
+// Output is the result of reconciling a document.
 type Output struct {
-	// DocumentID is the id of the resolved document.
+	Meta `json:"metadata"`
+
+	// Reconciled are groups whose best genus reached the threshold, with
+	// their expanded names.
+	Reconciled []Group `json:"reconciled"`
+
+	// Failed are groups without an accepted genus, with their distinct
+	// verbatims for inspection. Their names stay as they were.
+	Failed []Group `json:"failed"`
+}
+
+// Meta describes a run.
+type Meta struct {
+	// Version of gnabbr.
+	Version string `json:"version"`
+
+	// DocumentID is the id of the document.
 	DocumentID string `json:"documentId,omitempty"`
 
-	// Results has one entry per abbreviated occurrence, in the order of
-	// the document's occurrences.
-	Results []Result `json:"results"`
+	// Settings used for the run.
+	Settings Settings `json:"settings"`
 
-	// Groups are the groups sent to abbr_names, with its answers.
-	Groups []GroupOutput `json:"groups"`
+	// NamesNum is the number of input names.
+	NamesNum int `json:"namesNum"`
+
+	// AbbrNamesNum is the number of input names with an abbreviated
+	// genus.
+	AbbrNamesNum int `json:"abbrNamesNum"`
+
+	// ReconciledNum is the number of expanded names.
+	ReconciledNum int `json:"reconciledNum"`
+
+	// TotalSec is the duration of the run.
+	TotalSec float32 `json:"totalSec"`
 }
 
-// Result is the best genus for one abbreviated occurrence.
-type Result struct {
-	// OccurrenceID is the id of the occurrence in the document.
-	OccurrenceID string `json:"occurrenceId"`
+// Settings are the settings of a run that change its results.
+type Settings struct {
+	GapChars    int     `json:"gapChars"`
+	SpanChars   int     `json:"spanChars"`
+	HintWindow  int     `json:"hintWindow"`
+	HintsLimit  int     `json:"hintsLimit"`
+	GeneraLimit int     `json:"generaLimit"`
+	Threshold   float64 `json:"threshold"`
+}
 
-	// Name is the abbreviated name: `C. elegans`.
+// Group is a group of abbreviated names with the same abbreviation that
+// share a genus.
+type Group struct {
+	// Index of the group among all groups of the document.
+	Index int `json:"index"`
+
+	// Section is the id of the group's section, empty for the document.
+	Section string `json:"section,omitempty"`
+
+	// Abbr is the abbreviation without its period: `C`, `Cae`.
+	Abbr string `json:"abbr"`
+
+	// Start and End are the offsets of the first and the last name.
+	Start int `json:"start"`
+	End   int `json:"end"`
+
+	// TaxonStats sent to abbr_names.
+	TaxonStats TaxonStats `json:"taxonStats"`
+
+	// Hints are the genus hints of the group, nearest first.
+	Hints []string `json:"hints,omitempty"`
+
+	// Genus is the best candidate genus, nil if there is none.
+	Genus *abbr.Genus `json:"genus,omitempty"`
+
+	// Candidates are the runners-up.
+	Candidates []abbr.Genus `json:"candidates,omitempty"`
+
+	// Names are the expanded names (Reconciled groups only).
+	Names []Name `json:"names,omitempty"`
+
+	// Verbatims are distinct verbatims (Failed groups only).
+	Verbatims []string `json:"verbatims,omitempty"`
+
+	// Details are raw abbr_names input and output (WithDetails).
+	Details *Details `json:"details,omitempty"`
+}
+
+// TaxonStats are the taxonomic statistics abbr_names uses.
+type TaxonStats struct {
+	MainTaxon     string `json:"mainTaxon,omitempty"`
+	DominantClass string `json:"dominantClass,omitempty"`
+}
+
+// Name is an expanded name; it mirrors gnfinder's output.Name.
+type Name struct {
+	// ID of the input name.
+	ID string `json:"id"`
+
+	// Verbatim of the input name.
+	Verbatim string `json:"verbatim,omitempty"`
+
+	// Name is the accepted genus with the rest of the name as written:
+	// `Carex alba` for `C. alba`.
 	Name string `json:"name"`
 
-	// Genus is the best candidate genus, empty when none was found.
-	Genus string `json:"genus,omitempty"`
+	// AbbrName is the input name: `C. alba`.
+	AbbrName string `json:"abbrName"`
 
-	// Score is the total score of the genus.
-	Score float64 `json:"score"`
-
-	// Accepted is true when the score reaches the threshold.
-	Accepted bool `json:"accepted"`
-
-	// Group is the index of the occurrence's group in Output.Groups.
-	Group int `json:"group"`
+	// Start of the name in runes from the start of the document.
+	Start int `json:"start"`
 }
 
-// GroupOutput is a group of abbreviated names with the abbr_names
-// answer for it.
-type GroupOutput struct {
-	group.Group
+// Details are raw abbr_names input and output of a group.
+type Details struct {
 	Input  abbr.Input  `json:"input"`
 	Output abbr.Output `json:"output"`
 }

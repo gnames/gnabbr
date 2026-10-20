@@ -78,6 +78,9 @@ Section
 - TaxonStats are required for the document: callers calculate them
   (gnstats) from their verified names. A section without its own
   TaxonStats uses the document's.
+- TaxonStats may be empty when the caller has nothing to calculate them
+  from (in the BHL sample, 64 of 1,127 items and 787 of 5,607 parts have
+  no main taxon). gnabbr then reconciles without them.
 - Minimum input is `Names` with `Start` and the document's TaxonStats;
   the rest improves results or output readability. Callers join output
   to their data by `ID`.

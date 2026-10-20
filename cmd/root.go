@@ -84,12 +84,6 @@ func bootstrap(cmd *cobra.Command, args []string) error {
 	}
 	slog.Info("Config file ensured", "config_file", config.ConfigFilePath(homeDir))
 
-	gn.Info("Logs are available at <em>%s</em>", config.LogDir(homeDir))
-	gn.Info(
-		"Configuration files are available at <em>%s</em>",
-		config.ConfigDir(homeDir),
-	)
-
 	var cfgViper *config.Config
 	if cfgViper, err = initConfig(homeDir); err != nil {
 		slog.Error("Failed to initialize configuration", "error", err)
@@ -227,8 +221,8 @@ func initEnvVars(v *viper.Viper) {
 
 	// Resolver configuration
 	v.BindEnv("gnames_url")
-	v.BindEnv("gap_pages")
-	v.BindEnv("span_pages")
+	v.BindEnv("gap_chars")
+	v.BindEnv("span_chars")
 	v.BindEnv("hint_window")
 	v.BindEnv("hints_limit")
 	v.BindEnv("genera_limit")

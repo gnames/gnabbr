@@ -33,6 +33,16 @@ func Parse(name string) (AbbrName, bool) {
 	return AbbrName{Prefix: prefix, Epithet: ws[1]}, true
 }
 
+// Expand replaces the abbreviated genus of a name with genus and keeps
+// the rest as written: `Carex alba var. nigra` for `C. alba var. nigra`.
+func Expand(name, genus string) string {
+	ws := strings.Fields(name)
+	if len(ws) == 0 {
+		return genus
+	}
+	return strings.Join(append([]string{genus}, ws[1:]...), " ")
+}
+
 // Genus returns the genus of a full name (`Carex` for `Carex alba L.`),
 // or an empty string when the name does not start with a genus.
 func Genus(name string) string {

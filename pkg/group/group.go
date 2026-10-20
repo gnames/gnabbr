@@ -1,6 +1,6 @@
-// Package group splits abbreviated names of a document into local
-// groups: names with the same abbreviation, in the same part, on pages
-// close to each other. A group is what gnames abbr_names resolves at
+// Package group splits abbreviated names of one scope (a section or the
+// whole document) into local groups: names with the same abbreviation
+// close to each other. A group is what gnames abbr_names reconciles at
 // once, so names in a group are expected to share a genus.
 package group
 
@@ -12,59 +12,59 @@ import (
 	"github.com/gnames/gnabbr/pkg/doc"
 )
 
-// Group is a set of abbreviated names that are resolved together.
+// Group is a set of abbreviated names that are reconciled together.
 type Group struct {
-	// Part of the document the group is in.
-	Part string
+	// Section is the index of the group's section in Document.Sections,
+	// -1 for the document scope.
+	Section int
 
 	// Prefix is the abbreviation without its period.
 	Prefix string
 
-	// StartPage and EndPage are the first and last pages of the group.
-	StartPage, EndPage int
+	// Start and End are the offsets of the first and the last name.
+	Start, End int
 
-	// Members are indexes of the group's occurrences in the document,
-	// in reading order.
+	// Members are indexes of the group's names in Document.Names, by
+	// Start.
 	Members []int
 }
 
-// New makes groups from the abbreviated names among occurrences. A group
-// ends where the next name with its abbreviation is more than gapPages
-// pages away, or where the group would span more than spanPages pages.
-func New(occs []doc.Occurrence, gapPages, spanPages int) []Group {
+// New makes groups from the abbreviated names of a scope. Scope holds
+// indexes of the scope's names in names, sorted by Start. A group ends
+// where the next name with its abbreviation is more than gapChars runes
+// away, or where the group would span more than spanChars runes.
+func New(
+	names []doc.Name,
+	scope []int,
+	section, gapChars, spanChars int,
+) []Group {
 	type item struct {
 		idx    int
 		prefix string
 	}
 	var items []item
-	for i, o := range occs {
-		if a, ok := abbrname.Parse(o.Name); ok {
+	for _, i := range scope {
+		if a, ok := abbrname.Parse(names[i].Name); ok {
 			items = append(items, item{idx: i, prefix: a.Prefix})
 		}
 	}
+	// Stable: names with the same prefix stay sorted by Start.
 	slices.SortStableFunc(items, func(a, b item) int {
-		oa, ob := occs[a.idx], occs[b.idx]
-		return cmp.Or(
-			cmp.Compare(oa.Part, ob.Part),
-			cmp.Compare(a.prefix, b.prefix),
-			cmp.Compare(oa.Page, ob.Page),
-			cmp.Compare(oa.Offset, ob.Offset),
-		)
+		return cmp.Compare(a.prefix, b.prefix)
 	})
 
 	var res []Group
 	var cur *Group
 	for _, it := range items {
-		o := occs[it.idx]
-		if cur == nil || cur.Part != o.Part || cur.Prefix != it.prefix ||
-			o.Page-cur.EndPage > gapPages || o.Page-cur.StartPage > spanPages {
+		start := names[it.idx].Start
+		if cur == nil || cur.Prefix != it.prefix ||
+			start-cur.End > gapChars || start-cur.Start > spanChars {
 			res = append(res, Group{
-				Part: o.Part, Prefix: it.prefix,
-				StartPage: o.Page, EndPage: o.Page,
+				Section: section, Prefix: it.prefix, Start: start, End: start,
 			})
 			cur = &res[len(res)-1]
 		}
-		cur.EndPage = o.Page
+		cur.End = start
 		cur.Members = append(cur.Members, it.idx)
 	}
 	return res

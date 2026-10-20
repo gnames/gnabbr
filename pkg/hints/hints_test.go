@@ -10,22 +10,47 @@ import (
 
 func TestNew(t *testing.T) {
 	assert := assert.New(t)
-	occs := []doc.Occurrence{
-		{Name: "Carex alba", Page: 1},                // 0
-		{Name: "Cyperus fuscus", Page: 2},            // 1
-		{Name: "Juncus effusus", Page: 2, Offset: 9}, // 2
-		{Name: "C. alba", Page: 3},                   // 3
-		{Name: "Carex nigra", Page: 4},               // 4
-		{Name: "C. rubra", Page: 4, Offset: 7},       // 5
-		{Name: "C. viridis", Page: 30},               // 6, out of window
-		{Name: "C. alba", Page: 4, Part: "p2"},       // 7, other part
-		{Name: "Cy. fuscus", Page: 5},                // 8
+	names := []doc.Name{
+		{Name: "Cyperus fuscus", Start: 0},   // 0
+		{Name: "Coleoptera", Start: 50},      // 1, uninomial
+		{Name: "Carex alba", Start: 100},     // 2
+		{Name: "Juncus effusus", Start: 150}, // 3, other prefix
+		{Name: "C. nigra", Start: 200},       // 4
+		{Name: "Carex rubra", Start: 250},    // 5
+		{Name: "C. alba", Start: 300},        // 6
 	}
-	hs := hints.New(occs, 10, 5)
-	assert.Equal([]string{"Cyperus", "Carex"}, hs[3])
-	assert.Equal([]string{"Carex", "Cyperus"}, hs[5])
-	assert.Equal([]string{"Cyperus"}, hs[8])
-	assert.NotContains(hs, 6)
-	assert.NotContains(hs, 7)
-	assert.Len(hints.New(occs, 10, 1)[3], 1)
+	scope := []int{0, 1, 2, 3, 4, 5, 6}
+
+	hs := hints.New(names, scope, 1000, 5)
+	assert.Equal([]string{"Carex", "Coleoptera", "Cyperus"}, hs[4])
+	assert.Equal([]string{"Carex", "Coleoptera", "Cyperus"}, hs[6])
+
+	hs = hints.New(names, scope, 160, 2)
+	assert.Equal([]string{"Carex", "Coleoptera"}, hs[4])
+	assert.Equal([]string{"Carex"}, hs[6])
+
+	// Names outside the scope give no hints.
+	hs = hints.New(names, []int{3, 4}, 1000, 5)
+	assert.Empty(hs[4])
+}
+
+func TestMerge(t *testing.T) {
+	assert := assert.New(t)
+	res := hints.Merge(5,
+		[]string{"Carex", "Cyperus"},
+		[]string{"Cladium", "Carex", "Cuscuta"},
+	)
+	assert.Equal([]string{"Carex", "Cladium", "Cyperus", "Cuscuta"}, res)
+	assert.Equal([]string{"Carex"}, hints.Merge(1, []string{"Carex", "Cyperus"}))
+	assert.Empty(hints.Merge(5))
+}
+
+func TestExtend(t *testing.T) {
+	assert := assert.New(t)
+	group := []string{"Carex", "Cladium", "Cyperus"}
+	assert.Equal([]string{"Cyperus", "Carex", "Cladium"},
+		hints.Extend([]string{"Cyperus"}, group, 5))
+	assert.Equal([]string{"Cyperus", "Carex"},
+		hints.Extend([]string{"Cyperus"}, group, 2))
+	assert.Equal(group, hints.Extend(nil, group, 5))
 }

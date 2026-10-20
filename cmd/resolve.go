@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"io"
 	"os"
-	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gnames/gnabbr"
 	"github.com/gnames/gnabbr/pkg/config"
@@ -18,14 +19,19 @@ func getResolveCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "resolve [file]",
 		Short: "Resolves abbreviated names from a file or STDIN",
-		Long: `Reads names in reading order, one per line, from a file or STDIN,
-and prints the resolved abbreviated names as JSON. A line is a name or
-'page<TAB>name'. Full names give genus hints to abbreviated ones.`,
+		Long: `Reads a document from a file or STDIN and prints reconciled and
+failed groups of abbreviated names as JSON.
+
+The input is a JSON document (names with rune offsets, optional sections
+and TaxonStats, see pkg/doc), or plain text with one name per line in
+reading order; then the offset of a name is the offset of its line.
+Full names give genus hints to abbreviated ones.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: runResolve,
 	}
 	cmd.Flags().StringP("url", "u", "", "gnames API URL")
 	cmd.Flags().BoolP("features", "f", false, "return score features")
+	cmd.Flags().BoolP("details", "d", false, "return abbr_names input and output")
 	cmd.Flags().IntP("genera-limit", "g", 0, "candidate genera per group")
 	return cmd
 }
@@ -37,6 +43,9 @@ func runResolve(cmd *cobra.Command, args []string) error {
 	}
 	if b, _ := cmd.Flags().GetBool("features"); b {
 		opts = append(opts, config.OptWithFeatures(b))
+	}
+	if b, _ := cmd.Flags().GetBool("details"); b {
+		opts = append(opts, config.OptWithDetails(b))
 	}
 	if i, _ := cmd.Flags().GetInt("genera-limit"); i > 0 {
 		opts = append(opts, config.OptGeneraLimit(i))
@@ -69,23 +78,23 @@ func runResolve(cmd *cobra.Command, args []string) error {
 
 func readDocument(r io.Reader) (doc.Document, error) {
 	var d doc.Document
-	sc := bufio.NewScanner(r)
-	var n int
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return d, err
+	}
+	if t := bytes.TrimSpace(b); len(t) > 0 && t[0] == '{' {
+		err = json.Unmarshal(t, &d)
+		return d, err
+	}
+
+	sc := bufio.NewScanner(bytes.NewReader(b))
+	var start int
 	for sc.Scan() {
-		line := strings.TrimSpace(sc.Text())
-		if line == "" {
-			continue
+		line := sc.Text()
+		if name := strings.TrimSpace(line); name != "" {
+			d.Names = append(d.Names, doc.Name{Name: name, Start: start})
 		}
-		n++
-		page := 1
-		if p, name, ok := strings.Cut(line, "\t"); ok {
-			if i, err := strconv.Atoi(p); err == nil {
-				page, line = i, strings.TrimSpace(name)
-			}
-		}
-		d.Occurrences = append(d.Occurrences, doc.Occurrence{
-			ID: strconv.Itoa(n), Name: line, Page: page, Offset: n,
-		})
+		start += utf8.RuneCountInString(line) + 1
 	}
 	return d, sc.Err()
 }
