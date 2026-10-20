@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/gnames/gnabbr/pkg/config"
-	"github.com/gnames/gnabbr/pkg/ent/doc"
+	"github.com/gnames/gnabbr/pkg/doc"
 	"github.com/gnames/gnabbr/pkg/gnabbr"
 	"github.com/gnames/gnlib/ent/abbr"
 	"github.com/stretchr/testify/assert"
@@ -40,7 +40,7 @@ func TestResolve(t *testing.T) {
 	cfg := config.New()
 	cfg.Update([]config.Option{config.OptThreshold(2)})
 	f := &fakeNamer{}
-	g := gnabbr.NewWithClient(cfg, f)
+	g := gnabbr.New(cfg, f)
 
 	d := doc.Document{
 		ID: "item-1",

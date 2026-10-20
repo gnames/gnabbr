@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gnames/gnabbr"
 	"github.com/gnames/gnabbr/pkg/config"
-	"github.com/gnames/gnabbr/pkg/ent/doc"
-	"github.com/gnames/gnabbr/pkg/gnabbr"
+	"github.com/gnames/gnabbr/pkg/doc"
 	"github.com/spf13/cobra"
 )
 
@@ -57,7 +57,8 @@ func runResolve(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	out, err := gnabbr.New(cfg).Resolve(cmd.Context(), d)
+	out, err := gnabbr.New(append(cfg.ToOptions(), opts...)...).
+		Resolve(cmd.Context(), d)
 	if err != nil {
 		return err
 	}

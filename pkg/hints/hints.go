@@ -7,8 +7,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/gnames/gnabbr/pkg/ent/abbrname"
-	"github.com/gnames/gnabbr/pkg/ent/doc"
+	"github.com/gnames/gnabbr/pkg/abbrname"
+	"github.com/gnames/gnabbr/pkg/doc"
 )
 
 // New returns genus hints for each abbreviated occurrence, by its index

@@ -6,11 +6,10 @@ package gnabbr
 import (
 	"context"
 
-	"github.com/gnames/gnabbr/internal/io/abbrrest"
 	"github.com/gnames/gnabbr/pkg/config"
-	"github.com/gnames/gnabbr/pkg/ent/doc"
-	"github.com/gnames/gnabbr/pkg/ent/group"
-	"github.com/gnames/gnabbr/pkg/ent/hints"
+	"github.com/gnames/gnabbr/pkg/doc"
+	"github.com/gnames/gnabbr/pkg/group"
+	"github.com/gnames/gnabbr/pkg/hints"
 	"github.com/gnames/gnlib/ent/abbr"
 )
 
@@ -19,13 +18,9 @@ type gnabbr struct {
 	client AbbrNamer
 }
 
-// New creates GNabbr that calls abbr_names at cfg.GnamesURL.
-func New(cfg *config.Config) GNabbr {
-	return NewWithClient(cfg, abbrrest.New(cfg.GnamesURL))
-}
-
-// NewWithClient creates GNabbr with a given abbr_names implementation.
-func NewWithClient(cfg *config.Config, client AbbrNamer) GNabbr {
+// New creates GNabbr with a given abbr_names implementation. Callers
+// use github.com/gnames/gnabbr.New, which gives it the gnames client.
+func New(cfg *config.Config, client AbbrNamer) GNabbr {
 	return &gnabbr{cfg: cfg, client: client}
 }
 

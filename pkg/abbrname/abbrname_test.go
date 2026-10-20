@@ -3,7 +3,7 @@ package abbrname_test
 import (
 	"testing"
 
-	"github.com/gnames/gnabbr/pkg/ent/abbrname"
+	"github.com/gnames/gnabbr/pkg/abbrname"
 	"github.com/stretchr/testify/assert"
 )
 

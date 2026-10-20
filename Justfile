@@ -39,18 +39,18 @@ test-race:
 # Build the binary (development build with timestamp and git version)
 build:
     @mkdir -p bin
-    {{NO_C}} go build {{FLAGS_LD}} -o bin/{{APP}}
+    {{NO_C}} go build {{FLAGS_LD}} -o bin/{{APP}} ./cmd/{{APP}}
     @echo "✅ {{APP}} built to bin/{{APP}}"
 
 # Build release binary (uses version.go for Version, timestamp for Build)
 build-release:
     @mkdir -p bin
-    {{NO_C}} go build {{FLAGS_REL}} -o bin/{{APP}}
+    {{NO_C}} go build {{FLAGS_REL}} -o bin/{{APP}} ./cmd/{{APP}}
     @echo "✅ {{APP}} release binary built to bin/{{APP}}"
 
 # Install to ~/go/bin (development build with timestamp and git version)
 install:
-    {{NO_C}} go install {{FLAGS_LD}}
+    {{NO_C}} go install {{FLAGS_LD}} ./cmd/{{APP}}
     @echo "✅ {{APP}} installed to ~/go/bin/{{APP}}"
 
 # Build releases for multiple platforms
@@ -59,15 +59,15 @@ release:
 
     @mkdir -p bin/releases
 
-    {{NO_C}} {{LINUX}} {{X86}} go build {{FLAGS_REL}} -o bin/releases/{{APP}} 
+    {{NO_C}} {{LINUX}} {{X86}} go build {{FLAGS_REL}} -o bin/releases/{{APP}} ./cmd/{{APP}}
     tar zcvf bin/releases/{{APP}}-{{VER}}-linux.tar.gz -C bin/releases {{APP}}
     rm bin/releases/{{APP}}
 
-    {{NO_C}} {{MAC}} {{X86}} go build {{FLAGS_REL}} -o bin/releases/{{APP}}
+    {{NO_C}} {{MAC}} {{X86}} go build {{FLAGS_REL}} -o bin/releases/{{APP}} ./cmd/{{APP}}
     tar zcvf bin/releases/{{APP}}-{{VER}}-mac-amd64.tar.gz -C bin/releases {{APP}}
     rm bin/releases/{{APP}}
 
-    {{NO_C}} {{MAC}} {{ARM}} go build {{FLAGS_REL}} -o bin/releases/{{APP}}
+    {{NO_C}} {{MAC}} {{ARM}} go build {{FLAGS_REL}} -o bin/releases/{{APP}} ./cmd/{{APP}}
     tar zcvf bin/releases/{{APP}}-{{VER}}-mac-arm64.tar.gz -C bin/releases {{APP}}
     rm bin/releases/{{APP}}
 

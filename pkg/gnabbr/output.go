@@ -1,7 +1,7 @@
 package gnabbr
 
 import (
-	"github.com/gnames/gnabbr/pkg/ent/group"
+	"github.com/gnames/gnabbr/pkg/group"
 	"github.com/gnames/gnlib/ent/abbr"
 )
 

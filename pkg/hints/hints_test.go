@@ -3,8 +3,8 @@ package hints_test
 import (
 	"testing"
 
-	"github.com/gnames/gnabbr/pkg/ent/doc"
-	"github.com/gnames/gnabbr/pkg/ent/hints"
+	"github.com/gnames/gnabbr/pkg/doc"
+	"github.com/gnames/gnabbr/pkg/hints"
 	"github.com/stretchr/testify/assert"
 )
 

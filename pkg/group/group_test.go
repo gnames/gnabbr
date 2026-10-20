@@ -3,8 +3,8 @@ package group_test
 import (
 	"testing"
 
-	"github.com/gnames/gnabbr/pkg/ent/doc"
-	"github.com/gnames/gnabbr/pkg/ent/group"
+	"github.com/gnames/gnabbr/pkg/doc"
+	"github.com/gnames/gnabbr/pkg/group"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

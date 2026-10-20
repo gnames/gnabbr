@@ -8,8 +8,8 @@ import (
 	"cmp"
 	"slices"
 
-	"github.com/gnames/gnabbr/pkg/ent/abbrname"
-	"github.com/gnames/gnabbr/pkg/ent/doc"
+	"github.com/gnames/gnabbr/pkg/abbrname"
+	"github.com/gnames/gnabbr/pkg/doc"
 )
 
 // Group is a set of abbreviated names that are resolved together.

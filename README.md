@@ -25,13 +25,12 @@ Status: early development.
 
 ```go
 import (
+	"github.com/gnames/gnabbr"
 	"github.com/gnames/gnabbr/pkg/config"
-	"github.com/gnames/gnabbr/pkg/ent/doc"
-	"github.com/gnames/gnabbr/pkg/gnabbr"
+	"github.com/gnames/gnabbr/pkg/doc"
 )
 
-cfg := config.New()
-ga := gnabbr.New(cfg)
+ga := gnabbr.New(config.OptGnamesURL("http://localhost:8888/api/v1/"))
 out, err := ga.Resolve(ctx, doc.Document{
 	ID: "item-1",
 	Occurrences: []doc.Occurrence{
@@ -41,8 +40,10 @@ out, err := ga.Resolve(ctx, doc.Document{
 })
 ```
 
-`pkg/` and `internal/io` have no CLI, configuration file or database
-dependencies.
+Callers do not deal with gnames: the root package `gnabbr` joins the
+core logic (`pkg/gnabbr`) with the internal `abbr_names` client. `pkg/`
+never imports `internal/` and has no CLI, configuration file or
+database dependencies.
 
 ## Command line
 
@@ -57,15 +58,19 @@ A line is a name or `page<TAB>name`. Settings are in
 ## Layout
 
 ```
-pkg/gnabbr        public API: GNabbr, Resolve, Output
-pkg/config        settings (functional options, no I/O)
-pkg/ent/doc       input: documents and name occurrences
-pkg/ent/abbrname  parsing abbreviated names
-pkg/ent/group     local groups
-pkg/ent/hints     genus hints
-internal/io/...   abbr_names REST client
-internal/tune     temporary tuning client (BHL sample, weights, threshold)
-cmd               CLI
+gnabbr.go           entry point: New(opts...) joins pkg/gnabbr and internal/iognames
+cmd/gnabbr          main
+cmd                 CLI (Cobra)
+pkg/gnabbr          core: GNabbr, AbbrNamer, Resolve, Output
+pkg/config          settings (functional options, no I/O)
+pkg/doc             input: documents and name occurrences
+pkg/abbrname        parsing abbreviated names
+pkg/group           local groups
+pkg/hints           genus hints
+internal/iognames   abbr_names REST client (implements pkg/gnabbr.AbbrNamer)
+internal/iofs       config directories and file (CLI)
+internal/iologger   logging setup (CLI)
+internal/tune       temporary tuning client (BHL sample, weights, threshold)
 ```
 
 ## Tuning

@@ -3,7 +3,7 @@ package gnabbr
 import (
 	"context"
 
-	"github.com/gnames/gnabbr/pkg/ent/doc"
+	"github.com/gnames/gnabbr/pkg/doc"
 	"github.com/gnames/gnlib/ent/abbr"
 )
 
