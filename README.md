@@ -78,7 +78,7 @@ pkg/hints           genus hints
 internal/iognames   abbr_names REST client (implements pkg/gnabbr.AbbrNamer)
 internal/iofs       config directories and file (CLI)
 internal/iologger   logging setup (CLI)
-internal/tune       temporary tuning client (BHL sample, weights, threshold)
+internal/tune       temporary tuning client (`gnabbr tune`)
 ```
 
 ## Tuning
@@ -86,6 +86,15 @@ internal/tune       temporary tuning client (BHL sample, weights, threshold)
 Score weights live in gnames `abbr_names`; the threshold and calibration
 live here. They are tuned on a weighted sample of 1,127 BHL items with
 labels from the items themselves; see `internal/tune`.
+
+```bash
+gnabbr tune -D path/to/bhl-abbr-export -u http://localhost:8888/api/v1/ \
+  -o outcomes.jsonl
+```
+
+`tune` reconciles the exported sample (`docs/<item>.json`, `items.jsonl`,
+`labels.jsonl`), caches `abbr_names` answers by gnames build and request,
+and prints weighted agreement with labels by label kind and threshold.
 
 [gnfinder]: https://github.com/gnames/gnfinder
 [bhlindex]: https://github.com/gnames/bhlindex

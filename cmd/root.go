@@ -166,6 +166,7 @@ func init() {
 
 	// Add subcommands
 	rootCmd.AddCommand(getResolveCmd())
+	rootCmd.AddCommand(getTuneCmd())
 }
 
 func initConfig(home string) (*config.Config, error) {
