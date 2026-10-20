@@ -22,6 +22,7 @@ groups and hints make no calls. Temporary: goes away after tuning.`,
 		RunE: runTune,
 	}
 	cmd.Flags().StringP("data", "D", "", "directory of the exported sample (required)")
+	cmd.Flags().String("docs", "docs", "documents: docs, or docs-masked (no antecedents)")
 	cmd.Flags().StringP("cache", "c", "", "abbr_names cache (default <cache dir>/abbr_names.sqlite)")
 	cmd.Flags().StringP("out", "o", "", "file for outcomes, one JSON per line")
 	cmd.Flags().StringP("split", "s", "tune", "tune, holdout or all")
@@ -49,6 +50,7 @@ func runTune(cmd *cobra.Command, _ []string) error {
 	var o tune.Options
 	o.Config = c
 	o.DataDir, _ = f.GetString("data")
+	o.Docs, _ = f.GetString("docs")
 	o.CachePath, _ = f.GetString("cache")
 	o.OutPath, _ = f.GetString("out")
 	o.Split, _ = f.GetString("split")

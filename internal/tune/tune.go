@@ -22,8 +22,13 @@ import (
 
 // Options of a tuning run.
 type Options struct {
-	// DataDir has docs/, items.jsonl and labels.jsonl.
+	// DataDir has docs/, docs-masked/, items.jsonl and labels.jsonl.
 	DataDir string
+
+	// Docs is the directory of documents in DataDir: `docs`, or
+	// `docs-masked` for documents without antecedents of abbreviated
+	// names, which labels come from.
+	Docs string
 
 	// CachePath is the SQLite file with cached abbr_names answers.
 	CachePath string
@@ -105,6 +110,7 @@ func Run(ctx context.Context, opts Options) ([]Outcome, error) {
 	defer c.Close()
 	core := gnabbr.New(&cfg, c)
 	slog.Info("Tuning run started", "items", len(run), "split", opts.Split,
+		"docs", opts.Docs,
 		"gnames_version", version, "cache", opts.CachePath)
 
 	start := time.Now()
@@ -117,7 +123,7 @@ func Run(ctx context.Context, opts Options) ([]Outcome, error) {
 	for range max(opts.Jobs, 1) {
 		wg.Go(func() {
 			for it := range jobs {
-				outs, err := runItem(ctx, core, opts.DataDir, it, labels[it.ItemID])
+				outs, err := runItem(ctx, core, opts, it, labels[it.ItemID])
 				mu.Lock()
 				done++
 				if err != nil && firstErr == nil {
@@ -153,11 +159,11 @@ func Run(ctx context.Context, opts Options) ([]Outcome, error) {
 func runItem(
 	ctx context.Context,
 	core gnabbr.GNabbr,
-	dir string,
+	opts Options,
 	it Item,
 	labels []Label,
 ) ([]Outcome, error) {
-	d, err := readDoc(dir, it.ItemID)
+	d, err := readDoc(opts.DataDir, opts.Docs, it.ItemID)
 	if err != nil {
 		return nil, err
 	}

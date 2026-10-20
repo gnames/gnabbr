@@ -71,10 +71,10 @@ func readLabels(dir string) (map[int][]Label, error) {
 	return res, err
 }
 
-// readDoc reads docs/<item>.json.
-func readDoc(dir string, item int) (doc.Document, error) {
+// readDoc reads <dir>/<docs>/<item>.json.
+func readDoc(dir, docs string, item int) (doc.Document, error) {
 	var res doc.Document
-	b, err := os.ReadFile(filepath.Join(dir, "docs", strconv.Itoa(item)+".json"))
+	b, err := os.ReadFile(filepath.Join(dir, docs, strconv.Itoa(item)+".json"))
 	if err != nil {
 		return res, err
 	}
