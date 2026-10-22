@@ -64,6 +64,12 @@ The input is a JSON document (see `pkg/doc`) or one name per line;
 with lines, the offset of a name is the offset of its line. Settings are in
 `~/.config/gnabbr/config.yaml` or `GNABBR_*` environment variables.
 
+gnabbr needs a gnames with the `abbr_names` endpoint (gnames branch
+`137-abbr`, not released yet). The default `gnames_url`,
+`https://verifier.globalnames.org/api/v1/`, works only after such a
+gnames is deployed there; until then set it to a local gnames with
+`-u`, `gnames_url` in `config.yaml`, or `GNABBR_GNAMES_URL`.
+
 ## Layout
 
 ```
