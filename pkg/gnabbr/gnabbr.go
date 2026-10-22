@@ -56,7 +56,8 @@ func (g *gnabbr) Resolve(ctx context.Context, d doc.Document) (Output, error) {
 	}
 
 	scs := scopes(names, d.Sections)
-	if err := g.reread(ctx, d, names, scs); err != nil {
+	reread, err := g.reread(ctx, d, names, scs)
+	if err != nil {
 		return Output{}, err
 	}
 
@@ -68,7 +69,16 @@ func (g *gnabbr) Resolve(ctx context.Context, d doc.Document) (Output, error) {
 			st = *d.Sections[sec].TaxonStats
 		}
 		hs := hints.New(names, scope, g.cfg.HintWindow, g.cfg.HintsLimit)
-		gs := group.New(names, scope, sec, g.cfg.GapChars, g.cfg.SpanChars)
+		var plain, misread []int
+		for _, i := range scope {
+			if reread[i] {
+				misread = append(misread, i)
+			} else {
+				plain = append(plain, i)
+			}
+		}
+		gs := group.New(names, plain, sec, g.cfg.GapChars, g.cfg.SpanChars)
+		gs = append(gs, group.New(names, misread, sec, g.cfg.GapChars, g.cfg.SpanChars)...)
 		for _, gr := range gs {
 			cs, err := g.reconcile(ctx, names, gr, hs, st)
 			if err != nil {

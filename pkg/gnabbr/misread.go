@@ -12,20 +12,25 @@ import (
 )
 
 // reread replaces names whose abbreviation has two capitals in the text
-// (`CS. ambigua`) with their best reading (see abbrname.Readings), so
-// they are grouped with the names of the abbreviation they stand for.
+// (`CS. ambigua`) with their best reading (see abbrname.Readings), and
+// returns the indexes of the names it replaced.
 //
 // Each reading is sent to abbr_names alone, with the hints it gets in
 // its scope, and the reading whose best genus has the highest score
 // wins; an earlier reading wins a tie. A name in several scopes takes
 // the best reading of all of them. A name no reading of which gets a
 // genus stays as it is.
+//
+// A wrong reading is still common (`OE. fistulosa` read as `E.`, not
+// as Œnanthe), and in a group of names of its new abbreviation it can
+// make abbr_names prefer another genus for all of them, so reread
+// names are grouped only with each other.
 func (g *gnabbr) reread(
 	ctx context.Context,
 	d doc.Document,
 	names []doc.Name,
 	scs []scope,
-) error {
+) (map[int]bool, error) {
 	readings := make(map[int][]string)
 	var most int
 	for i, n := range names {
@@ -35,7 +40,7 @@ func (g *gnabbr) reread(
 		}
 	}
 	if len(readings) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	// variants[k] has the k-th reading of every misread name that has
@@ -85,10 +90,10 @@ func (g *gnabbr) reread(
 				}
 				out, err := g.client.AbbrNames(ctx, inp)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				if out.Error != "" {
-					return fmt.Errorf("abbr_names for %q: %s", vs[i].Name, out.Error)
+					return nil, fmt.Errorf("abbr_names for %q: %s", vs[i].Name, out.Error)
 				}
 				if len(out.Genera) == 0 {
 					continue
@@ -100,8 +105,12 @@ func (g *gnabbr) reread(
 			}
 		}
 	}
+	res := make(map[int]bool, len(bests))
 	for i, b := range bests {
-		names[i].Name = b.name
+		if b.name != names[i].Name {
+			names[i].Name = b.name
+			res[i] = true
+		}
 	}
-	return nil
+	return res, nil
 }

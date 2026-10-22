@@ -366,12 +366,14 @@ func TestResolveMisread(t *testing.T) {
 	out, err := g.Resolve(context.Background(), d)
 	require.NoError(t, err)
 
-	// Only the reading without the first letter has hints, so it joins
-	// the group of `S.`; no reading of `CQ.` gets a genus, so it stays.
-	require.Len(t, out.Reconciled, 1)
-	gr := out.Reconciled[0]
+	// Only the reading without the first letter has hints, so `CS.` is
+	// read as `S.`, in a group of its own, apart from `S. alba`; no
+	// reading of `CQ.` gets a genus, so it stays.
+	require.Len(t, out.Reconciled, 2)
+	assert.Equal("Spiraea alba", out.Reconciled[0].Names[0].Name)
+	gr := out.Reconciled[1]
 	assert.Equal("S", gr.Abbr)
-	require.Len(t, gr.Names, 2)
+	require.Len(t, gr.Names, 1)
 	assert.Equal("Spiraea ambigua", gr.Names[0].Name)
 	assert.Equal("S. ambigua", gr.Names[0].AbbrName)
 	assert.Equal("(CS. ambigua)", gr.Names[0].Verbatim)
