@@ -76,6 +76,10 @@ type Group struct {
 	// mixed group).
 	Split bool `json:"split,omitempty"`
 
+	// Alone is true for a name of a mixed group that the group left
+	// without a genus, reconciled on its own.
+	Alone bool `json:"alone,omitempty"`
+
 	// Hints are the hints of the group, nearest first: full names, or
 	// genera for uninomials.
 	Hints []string `json:"hints,omitempty"`

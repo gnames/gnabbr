@@ -202,8 +202,9 @@ func TestResolveMixed(t *testing.T) {
 	out, err := g.Resolve(context.Background(), d)
 	require.NoError(t, err)
 
-	// The group, the group with full tolerance, and two runs.
-	require.Len(t, f.inputs, 4)
+	// The group, the group with full tolerance, two runs, and the name
+	// left out of the runs on its own.
+	require.Len(t, f.inputs, 5)
 	assert.Nil(f.inputs[0].Tolerance)
 	assert.Equal(100, *f.inputs[1].Tolerance)
 
@@ -220,9 +221,9 @@ func TestResolveMixed(t *testing.T) {
 	assert.Equal("Glossina morsitans", b.Names[0].Name)
 	assert.Equal(4, out.ReconciledNum)
 
-	// The name left out of the runs stays in the failed group.
+	// The name left out of the runs gets no genus on its own either.
 	require.Len(t, out.Failed, 1)
-	assert.False(out.Failed[0].Split)
+	assert.True(out.Failed[0].Alone)
 	assert.Equal([]string{"G. qqq,"}, out.Failed[0].Verbatims)
 }
 
@@ -270,7 +271,7 @@ func (f *tableNamer) AbbrNames(_ context.Context, inp abbr.Input) (abbr.Output, 
 // A genus that matches all names by chance (Ficus) loses to the genus
 // that is the nearest hint of a name (Formica for `F. rufa`). A name
 // whose genus is not its nearest hint and does not hold for two names
-// stays as it was.
+// is left out of the runs and asked on its own.
 func TestResolveUnsupportedGenus(t *testing.T) {
 	assert := assert.New(t)
 	f := &tableNamer{genera: map[string][]string{
@@ -290,16 +291,19 @@ func TestResolveUnsupportedGenus(t *testing.T) {
 	out, err := g.Resolve(context.Background(), d)
 	require.NoError(t, err)
 
-	require.Len(t, out.Reconciled, 1)
+	require.Len(t, out.Reconciled, 2)
 	r := out.Reconciled[0]
 	assert.True(r.Split)
 	assert.Equal("Formica", r.Genus.Name)
 	require.Len(t, r.Names, 1)
 	assert.Equal("Formica rufa", r.Names[0].Name)
 
-	require.Len(t, out.Failed, 1)
-	assert.Equal("Ficus", out.Failed[0].Genus.Name)
-	assert.Equal([]string{"F. elastica"}, out.Failed[0].Verbatims)
+	r = out.Reconciled[1]
+	assert.True(r.Alone)
+	assert.Equal("Ficus", r.Genus.Name)
+	require.Len(t, r.Names, 1)
+	assert.Equal("Ficus elastica", r.Names[0].Name)
+	assert.Empty(out.Failed)
 }
 
 // An accepted genus expands only the names it matched; the others stay

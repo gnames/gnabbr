@@ -43,6 +43,8 @@ type candidate struct {
 	accepted bool
 	// split is true for a run of a split mixed group.
 	split bool
+	// alone is true for a name of a mixed group asked on its own.
+	alone bool
 }
 
 // Resolve implements GNabbr.
@@ -140,8 +142,9 @@ func scopes(names []doc.Name, secs []doc.Section) []scope {
 // (see segment). The group stays as it is if its runs agree with its
 // genus. Otherwise (no genus, several genera, or a genus that hints do
 // not support while another one is) each run is reconciled as a group
-// of its own, and the group keeps only names left out of the runs,
-// without a genus.
+// of its own. Names of a mixed group that are left without a genus, out
+// of the runs or because the group has none, are asked one distinct
+// name at a time (see alone); the group keeps none of its names.
 func (g *gnabbr) reconcile(
 	ctx context.Context,
 	names []doc.Name,
@@ -160,7 +163,7 @@ func (g *gnabbr) reconcile(
 	if err != nil {
 		return nil, err
 	}
-	if len(rs) == 0 || (c.genus != nil && len(rs) == 1 && rs[0].genus == c.genus.Name) {
+	if c.accepted && (len(rs) == 0 || (len(rs) == 1 && rs[0].genus == c.genus.Name)) {
 		return []candidate{c}, nil
 	}
 
@@ -178,8 +181,55 @@ func (g *gnabbr) reconcile(
 		}
 	}
 	res[0].accepted = false
-	res[0].group.Members = slices.DeleteFunc(slices.Clone(c.group.Members),
+	left := slices.DeleteFunc(slices.Clone(c.group.Members),
 		func(i int) bool { return inRuns[i] })
+	as, err := g.alone(ctx, names, gr, left, hs, st)
+	if err != nil {
+		return nil, err
+	}
+	res[0].group.Members = nil
+	return append(res, as...), nil
+}
+
+// alone asks each distinct name of members, indexes of names of group
+// gr, on its own, with all its occurrences in gr. In a large mixed
+// group the genera that match many names fill the candidates, and a
+// genus that matches one name and is its nearest hint does not come
+// back (Platysaurus for `P. intermedius` among 42 names of `P.`).
+func (g *gnabbr) alone(
+	ctx context.Context,
+	names []doc.Name,
+	gr group.Group,
+	members []int,
+	hs map[int][]string,
+	st stats.Stats,
+) ([]candidate, error) {
+	var order []string
+	byName := make(map[string][]int)
+	for _, i := range members {
+		n := names[i].Name
+		if _, ok := byName[n]; !ok {
+			order = append(order, n)
+		}
+		byName[n] = append(byName[n], i)
+	}
+	res := make([]candidate, 0, len(order))
+	for _, n := range order {
+		ms := byName[n]
+		ng := group.Group{
+			Section: gr.Section,
+			Prefix:  gr.Prefix,
+			Start:   names[ms[0]].Start,
+			End:     names[ms[len(ms)-1]].Start,
+			Members: ms,
+		}
+		c, err := g.ask(ctx, names, ng, hs, st, nil, g.cfg.GeneraLimit)
+		if err != nil {
+			return nil, err
+		}
+		c.alone = true
+		res = append(res, c)
+	}
 	return res, nil
 }
 
@@ -347,6 +397,7 @@ func (g *gnabbr) group(d doc.Document, c candidate) Group {
 		Hints:      c.hints,
 		Genus:      c.genus,
 		Split:      c.split,
+		Alone:      c.alone,
 	}
 	if s := c.group.Section; s >= 0 {
 		res.Section = cmp.Or(d.Sections[s].ID, strconv.Itoa(s))
