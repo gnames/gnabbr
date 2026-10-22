@@ -28,7 +28,7 @@ type cache struct {
 }
 
 func newCache(path, version string, client gnabbr.AbbrNamer) (*cache, error) {
-	db, err := sql.Open("sqlite", path+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(10000)")
+	db, err := sql.Open("sqlite", path+"?_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(10000)")
 	if err != nil {
 		return nil, err
 	}
