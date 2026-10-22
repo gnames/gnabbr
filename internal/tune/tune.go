@@ -36,6 +36,10 @@ type Options struct {
 	// OutPath, if not empty, gets one Outcome per line.
 	OutPath string
 
+	// GroupsPath, if not empty, gets the groups of the run items, one
+	// ItemGroup per line, to inspect scores.
+	GroupsPath string
+
 	// Split is `tune`, `holdout` or `all`.
 	Split string
 
@@ -71,6 +75,13 @@ type Outcome struct {
 	// name as abbreviated) or `no genus` (abbr_names found no genus for
 	// its group).
 	Status string `json:"status"`
+}
+
+// ItemGroup is a group of a run item.
+type ItemGroup struct {
+	ItemID     int  `json:"itemId"`
+	Reconciled bool `json:"reconciled"`
+	gnabbr.Group
 }
 
 // Run reconciles the items of a split and returns outcomes of their
@@ -113,6 +124,16 @@ func Run(ctx context.Context, opts Options) ([]Outcome, error) {
 		"docs", opts.Docs,
 		"gnames_version", version, "cache", opts.CachePath)
 
+	var groups *json.Encoder
+	if opts.GroupsPath != "" {
+		f, err := os.Create(opts.GroupsPath)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		groups = json.NewEncoder(f)
+	}
+
 	start := time.Now()
 	jobs := make(chan Item)
 	var mu sync.Mutex
@@ -123,9 +144,12 @@ func Run(ctx context.Context, opts Options) ([]Outcome, error) {
 	for range max(opts.Jobs, 1) {
 		wg.Go(func() {
 			for it := range jobs {
-				outs, err := runItem(ctx, core, opts, it, labels[it.ItemID])
+				outs, out, err := runItem(ctx, core, opts, it, labels[it.ItemID])
 				mu.Lock()
 				done++
+				if err == nil && groups != nil {
+					err = writeGroups(groups, it.ItemID, out)
+				}
 				if err != nil && firstErr == nil {
 					firstErr = fmt.Errorf("item %d: %w", it.ItemID, err)
 				}
@@ -162,14 +186,15 @@ func runItem(
 	opts Options,
 	it Item,
 	labels []Label,
-) ([]Outcome, error) {
+) ([]Outcome, gnabbr.Output, error) {
+	var out gnabbr.Output
 	d, err := readDoc(opts.DataDir, opts.Docs, it.ItemID)
 	if err != nil {
-		return nil, err
+		return nil, out, err
 	}
-	out, err := core.Resolve(ctx, d)
+	out, err = core.Resolve(ctx, d)
 	if err != nil {
-		return nil, err
+		return nil, out, err
 	}
 
 	type expanded struct {
@@ -217,7 +242,21 @@ func runItem(
 		}
 		res = append(res, o)
 	}
-	return res, nil
+	return res, out, nil
+}
+
+func writeGroups(enc *json.Encoder, item int, out gnabbr.Output) error {
+	for _, g := range out.Reconciled {
+		if err := enc.Encode(ItemGroup{item, true, g}); err != nil {
+			return err
+		}
+	}
+	for _, g := range out.Failed {
+		if err := enc.Encode(ItemGroup{item, false, g}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // gnamesVersion returns the version and build of gnames at url, a part
