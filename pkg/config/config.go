@@ -19,7 +19,6 @@
 //
 // Persistent fields (in ToOptions, config.yaml, and env vars):
 //   - Log: level, format, destination
-//   - General: jobs_number
 //   - Resolver: gnames_url, gap_chars, span_chars, hint_window,
 //     hints_limit, genera_limit, threshold
 //
@@ -32,21 +31,13 @@
 // Use GNABBR_ prefix with underscores for nesting:
 //
 //	GNABBR_LOG_LEVEL=info
-//	GNABBR_JOBS_NUMBER=8
+//	GNABBR_THRESHOLD=7
 package config
-
-import (
-	"runtime"
-)
 
 // Config represents the complete application configuration.
 type Config struct {
 	// Log contains logging configuration.
 	Log LogConfig `mapstructure:"log" yaml:"log"`
-
-	// JobsNumber is the number of concurrent workers for parallel operations.
-	// Default value is set according to the number of available threads.
-	JobsNumber int `mapstructure:"jobs_number" yaml:"jobs_number"`
 
 	// GnamesURL is the gnames REST API that provides abbr_names.
 	GnamesURL string `mapstructure:"gnames_url" yaml:"gnames_url"`
@@ -102,8 +93,7 @@ func New() *Config {
 			Level:       "info",
 			Destination: "file",
 		},
-		JobsNumber: runtime.NumCPU(), // Default to number of CPU threads
-		GnamesURL:  "https://verifier.globalnames.org/api/v1/",
+		GnamesURL: "https://verifier.globalnames.org/api/v1/",
 		// A BHL page has about 2,500 runes: 10, 50 and 50 pages.
 		GapChars:    25_000,
 		SpanChars:   125_000,
@@ -133,7 +123,6 @@ func (c *Config) Update(opts []Option) {
 func (c *Config) ToOptions() []Option {
 	var res []Option
 	var s string
-	var i int
 	s = c.Log.Format
 	if s != "" {
 		res = append(res, OptLogFormat(s))
@@ -145,11 +134,6 @@ func (c *Config) ToOptions() []Option {
 	s = c.Log.Destination
 	if s != "" {
 		res = append(res, OptLogDestination(s))
-	}
-
-	i = c.JobsNumber
-	if i > 0 {
-		res = append(res, OptJobsNumber(i))
 	}
 
 	if c.GnamesURL != "" {

@@ -16,9 +16,6 @@ log:
   # level: info                 # Options: debug, info, warn, error
   # destination: file           # Options: file, stdout, stderr
 
-# General settings
-# jobs_number: 0                # 0 means use runtime.NumCPU()
-
 # Resolver settings
 # gnames_url: https://verifier.globalnames.org/api/v1/
 # gap_chars: 25000              # a larger gap in runes starts a new group

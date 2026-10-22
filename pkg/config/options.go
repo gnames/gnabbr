@@ -37,15 +37,6 @@ func OptLogDestination(s string) Option {
 	}
 }
 
-// OptJobsNumber sets the number of concurrent workers.
-func OptJobsNumber(i int) Option {
-	return func(c *Config) {
-		if isValidInt("Jobs Number", i) {
-			c.JobsNumber = i
-		}
-	}
-}
-
 // OptGnamesURL sets the gnames REST API URL.
 func OptGnamesURL(s string) Option {
 	s = strings.TrimSpace(s)

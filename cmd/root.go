@@ -116,8 +116,7 @@ func bootstrap(cmd *cobra.Command, args []string) error {
 		"config_file", config.ConfigFilePath(homeDir),
 		"log_format", cfg.Log.Format,
 		"log_level", cfg.Log.Level,
-		"log_destination", cfg.Log.Destination,
-		"jobs_number", cfg.JobsNumber)
+		"log_destination", cfg.Log.Destination)
 
 	return nil
 }
@@ -198,8 +197,7 @@ func initConfig(home string) (*config.Config, error) {
 	}
 	slog.Info("Configuration unmarshaled successfully",
 		"log_level", res.Log.Level,
-		"log_format", res.Log.Format,
-		"jobs_number", res.JobsNumber)
+		"log_format", res.Log.Format)
 
 	return &res, nil
 }
@@ -235,10 +233,6 @@ func initEnvVars(v *viper.Viper) {
 	v.BindEnv("log.format")
 	v.BindEnv("log.destination")
 	slog.Info("Log environment variables bound")
-
-	// General configuration
-	v.BindEnv("jobs_number")
-	slog.Info("General environment variables bound")
 
 	// Resolver configuration
 	v.BindEnv("gnames_url")
