@@ -183,6 +183,7 @@ func initConfig(home string) (*config.Config, error) {
 	slog.Info("Viper initialized with config file path")
 
 	initEnvVars(v)
+	initDefaults(v)
 
 	if err = v.ReadInConfig(); err != nil {
 		slog.Error("Failed to read config file", "error", err, "config_path", cfgPath)
@@ -201,6 +202,21 @@ func initConfig(home string) (*config.Config, error) {
 		"jobs_number", res.JobsNumber)
 
 	return &res, nil
+}
+
+// initDefaults gives viper the built-in defaults of persistent fields,
+// so a field missing from config.yaml and env keeps its default. Without
+// it a missing threshold unmarshals as 0, and config.ToOptions applies
+// it, as 0 is a valid threshold.
+func initDefaults(v *viper.Viper) {
+	d := config.New()
+	v.SetDefault("gnames_url", d.GnamesURL)
+	v.SetDefault("gap_chars", d.GapChars)
+	v.SetDefault("span_chars", d.SpanChars)
+	v.SetDefault("hint_window", d.HintWindow)
+	v.SetDefault("hints_limit", d.HintsLimit)
+	v.SetDefault("genera_limit", d.GeneraLimit)
+	v.SetDefault("threshold", d.Threshold)
 }
 
 func initEnvVars(v *viper.Viper) {

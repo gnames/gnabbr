@@ -26,4 +26,4 @@ log:
 # hint_window: 125000           # runes back that give genus hints
 # hints_limit: 5                # genus hints per name
 # genera_limit: 5               # candidate genera per group
-# threshold: 0                  # lowest score of an accepted genus
+# threshold: 8                  # lowest score of an accepted genus
