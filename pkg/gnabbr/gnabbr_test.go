@@ -37,6 +37,14 @@ func (f *fakeNamer) AbbrNames(_ context.Context, inp abbr.Input) (abbr.Output, e
 	return abbr.Output{Genera: []abbr.Genus{gen, {Name: "Cyperus"}}}, nil
 }
 
+// testConfig returns the default configuration with threshold 0: fake
+// namers score a few points, below the default threshold.
+func testConfig(opts ...config.Option) *config.Config {
+	cfg := config.New()
+	cfg.Update(append([]config.Option{config.OptThreshold(0)}, opts...))
+	return cfg
+}
+
 func taxonStats(mainTaxon, class string) stats.Stats {
 	return stats.Stats{
 		MainTaxon: stats.Taxon{Name: mainTaxon},
@@ -113,8 +121,7 @@ func TestResolve(t *testing.T) {
 // one with the better score, the first one on ties (`C. nigra`).
 func TestResolveOverlap(t *testing.T) {
 	assert := assert.New(t)
-	cfg := config.New()
-	cfg.Update([]config.Option{config.OptWithDetails(true)})
+	cfg := testConfig(config.OptWithDetails(true))
 	g := gnabbr.New(cfg, &fakeNamer{})
 
 	d := doc.Document{
@@ -186,7 +193,7 @@ func (f *mixedNamer) AbbrNames(_ context.Context, inp abbr.Input) (abbr.Output, 
 func TestResolveMixed(t *testing.T) {
 	assert := assert.New(t)
 	f := &mixedNamer{}
-	g := gnabbr.New(config.New(), f)
+	g := gnabbr.New(testConfig(), f)
 
 	d := doc.Document{
 		Names: []doc.Name{
@@ -278,7 +285,7 @@ func TestResolveUnsupportedGenus(t *testing.T) {
 		"F. rufa":     {"Ficus", "Formica"},
 		"F. elastica": {"Ficus"},
 	}}
-	g := gnabbr.New(config.New(), f)
+	g := gnabbr.New(testConfig(), f)
 
 	d := doc.Document{
 		Names: []doc.Name{
@@ -383,4 +390,56 @@ func TestResolveMisread(t *testing.T) {
 	assert.Equal("(CS. ambigua)", gr.Names[0].Verbatim)
 	require.Len(t, out.Failed, 1)
 	assert.Equal("Cq", out.Failed[0].Abbr)
+}
+
+// A mixed group without a genus and without runs asks each distinct
+// name on its own, with all its occurrences.
+func TestResolveAlone(t *testing.T) {
+	assert := assert.New(t)
+	f := &tableNamer{genera: map[string][]string{
+		"P. intermedius": {"Platysaurus"},
+		"P. perdix":      {"Perdix"},
+	}}
+	g := gnabbr.New(testConfig(), f)
+
+	d := doc.Document{
+		Names: []doc.Name{
+			{Name: "P. intermedius", Start: 100},
+			{Name: "P. perdix", Start: 200},
+			{Name: "P. intermedius", Start: 300},
+		},
+	}
+	out, err := g.Resolve(context.Background(), d)
+	require.NoError(t, err)
+
+	require.Len(t, out.Reconciled, 2)
+	a, b := out.Reconciled[0], out.Reconciled[1]
+	assert.True(a.Alone)
+	assert.Equal("Platysaurus", a.Genus.Name)
+	assert.Equal(100, a.Start)
+	assert.Equal(300, a.End)
+	require.Len(t, a.Names, 2)
+	assert.Equal("Perdix", b.Genus.Name)
+	assert.Equal(3, out.ReconciledNum)
+	assert.Empty(out.Failed)
+}
+
+// The default threshold rejects a genus that scores under 8.
+func TestResolveDefaultThreshold(t *testing.T) {
+	assert := assert.New(t)
+	assert.Equal(8.0, config.New().Threshold)
+
+	g := gnabbr.New(config.New(), &fakeNamer{})
+	d := doc.Document{
+		Names: []doc.Name{
+			{Name: "Caenorhabditis elegans", Start: 0},
+			{Name: "C. elegans", Start: 20},
+		},
+	}
+	out, err := g.Resolve(context.Background(), d)
+	require.NoError(t, err)
+	assert.Empty(out.Reconciled)
+	require.Len(t, out.Failed, 1)
+	assert.Equal("Caenorhabditis", out.Failed[0].Genus.Name)
+	assert.Equal(8.0, out.Settings.Threshold)
 }

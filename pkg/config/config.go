@@ -110,6 +110,9 @@ func New() *Config {
 		HintWindow:  125_000,
 		HintsLimit:  5,
 		GeneraLimit: 5,
+		// Precision over recall: on the BHL holdout gold set 8 gives
+		// 96.8% precision and 84.5% recall, 7 gives 96.0% and 88.0%.
+		Threshold: 8,
 	}
 	return res
 }

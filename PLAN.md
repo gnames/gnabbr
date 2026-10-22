@@ -187,8 +187,10 @@ These need structured hints in `abbr_names` (gnlib, gnames).
 - Calibration is needed; its direction (e.g. weights of score features,
   margin over the second genus, group size) is decided after the first
   run.
-- The threshold starts permissive (recall first) and is tightened on
-  evidence.
+- The threshold started permissive (recall first) and was tightened on
+  evidence. The default is 8: precision matters more than recall. On
+  the BHL holdout gold set (reviewed labels) it gives 96.8% precision
+  and 84.5% recall; 7 gives 96.0% and 88.0%.
 - Rejected groups are still reported with their best genus, as
   candidates, not as reconciled names.
 

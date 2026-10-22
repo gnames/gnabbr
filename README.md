@@ -21,8 +21,9 @@ Status: early development.
 4. **Reconcile** each group with [gnames] `abbr_names`, adding the
    taxonomic statistics of the section or the document (main taxon,
    dominant class), given by the caller.
-5. **Accept** the best genus when its score reaches a threshold, and
-   expand the group's names with it (`C. alba` -> `Carex alba`).
+5. **Accept** the best genus when its score reaches a threshold (8 by
+   default, which favors precision), and expand the group's names with
+   it (`C. alba` -> `Carex alba`).
    Callers verify expanded names with their other names.
 
 ## Library
