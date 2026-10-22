@@ -347,3 +347,34 @@ func (f *partialNamer) AbbrNames(ctx context.Context, inp abbr.Input) (abbr.Outp
 	}
 	return f.tableNamer.AbbrNames(ctx, inp)
 }
+
+func TestResolveMisread(t *testing.T) {
+	assert := assert.New(t)
+	cfg := config.New()
+	cfg.Update([]config.Option{config.OptThreshold(1)})
+	f := &fakeNamer{}
+	g := gnabbr.New(cfg, f)
+
+	d := doc.Document{
+		Names: []doc.Name{
+			{Name: "Spiraea ambigua", Start: 0},
+			{Name: "Cs. ambigua", Verbatim: "(CS. ambigua)", Start: 100},
+			{Name: "S. alba", Start: 200},
+			{Name: "Cq. mongolica", Verbatim: "CQ. mongolica", Start: 300},
+		},
+	}
+	out, err := g.Resolve(context.Background(), d)
+	require.NoError(t, err)
+
+	// Only the reading without the first letter has hints, so it joins
+	// the group of `S.`; no reading of `CQ.` gets a genus, so it stays.
+	require.Len(t, out.Reconciled, 1)
+	gr := out.Reconciled[0]
+	assert.Equal("S", gr.Abbr)
+	require.Len(t, gr.Names, 2)
+	assert.Equal("Spiraea ambigua", gr.Names[0].Name)
+	assert.Equal("S. ambigua", gr.Names[0].AbbrName)
+	assert.Equal("(CS. ambigua)", gr.Names[0].Verbatim)
+	require.Len(t, out.Failed, 1)
+	assert.Equal("Cq", out.Failed[0].Abbr)
+}

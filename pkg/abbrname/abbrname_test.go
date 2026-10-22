@@ -53,3 +53,28 @@ func TestGenus(t *testing.T) {
 		assert.Equal(v.genus, abbrname.Genus(v.name), v.name)
 	}
 }
+
+func TestReadings(t *testing.T) {
+	assert := assert.New(t)
+	tests := []struct {
+		verbatim, name string
+		res            []string
+	}{
+		{"(CS. ambigua", "Cs. ambigua",
+			[]string{"S. ambigua", "C. ambigua", "Cs. ambigua"}},
+		{"LL. clethroides,", "Ll. clethroides",
+			[]string{"L. clethroides", "Ll. clethroides"}},
+		{"CI. moniliferum.", "Ci. moniliferum",
+			[]string{"I. moniliferum", "C. moniliferum", "Cl. moniliferum", "Ci. moniliferum"}},
+		{"JHa. alba var. nigra", "Jha. alba var. nigra",
+			[]string{"Ha. alba var. nigra", "J. alba var. nigra", "Jha. alba var. nigra"}},
+		{"Cs. ambigua", "Cs. ambigua", nil},
+		{"C. ambigua", "C. ambigua", nil},
+		{"CSA. ambigua", "Csa. ambigua", nil},
+		{"CS. ambigua", "Carex ambigua", nil},
+		{"", "Cs. ambigua", nil},
+	}
+	for _, v := range tests {
+		assert.Equal(v.res, abbrname.Readings(v.verbatim, v.name), v.verbatim)
+	}
+}

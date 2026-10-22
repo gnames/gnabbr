@@ -3,6 +3,7 @@
 package abbrname
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -31,6 +32,52 @@ func Parse(name string) (AbbrName, bool) {
 		return AbbrName{}, false
 	}
 	return AbbrName{Prefix: prefix, Epithet: ws[1]}, true
+}
+
+// Readings returns possible readings of an abbreviated name whose
+// abbreviation has two capitals in the text (`CS. ambigua`, normalized to
+// `Cs. ambigua`), or nil for any other name. Such an abbreviation is
+// usually an OCR error: a stray character before the real one (`(` read
+// as `C`, `J`, `I`), a doubled letter (`LL.`), or a two-letter
+// abbreviation with a wrong case (`PL.`, `CI.` for `Cl.`). The readings
+// are, in order: without the first letter (`S. ambigua`), the first
+// letter only (`C. ambigua`), `l` for `I` as the second letter
+// (`Cl. ambigua` for `CI.`), and the name as it is.
+func Readings(verbatim, name string) []string {
+	v := strings.TrimLeftFunc(verbatim, func(r rune) bool { return !unicode.IsLetter(r) })
+	ws := strings.Fields(v)
+	if len(ws) < 2 {
+		return nil
+	}
+	prefix, ok := strings.CutSuffix(ws[0], ".")
+	rs := []rune(prefix)
+	if !ok || len(rs) < 2 || len(rs) > 3 ||
+		!unicode.IsUpper(rs[0]) || !unicode.IsUpper(rs[1]) ||
+		(len(rs) == 3 && !unicode.IsLower(rs[2])) {
+		return nil
+	}
+	a, ok := Parse(name)
+	if !ok {
+		return nil
+	}
+	rest := strings.Join(strings.Fields(name)[1:], " ")
+	prefixes := []string{string(rs[1:]), string(rs[0])}
+	if rs[1] == 'I' {
+		prefixes = append(prefixes, string(rs[0])+"l"+string(rs[2:]))
+	}
+	prefixes = append(prefixes, a.Prefix)
+
+	var res []string
+	for _, p := range prefixes {
+		if !isPrefix(p) {
+			continue
+		}
+		n := p + ". " + rest
+		if !slices.Contains(res, n) {
+			res = append(res, n)
+		}
+	}
+	return res
 }
 
 // Expand replaces the abbreviated genus of a name with genus and keeps

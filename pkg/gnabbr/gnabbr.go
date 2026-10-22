@@ -55,8 +55,13 @@ func (g *gnabbr) Resolve(ctx context.Context, d doc.Document) (Output, error) {
 		}
 	}
 
+	scs := scopes(names, d.Sections)
+	if err := g.reread(ctx, d, names, scs); err != nil {
+		return Output{}, err
+	}
+
 	var cands []candidate
-	for _, sc := range scopes(names, d.Sections) {
+	for _, sc := range scs {
 		sec, scope := sc.section, sc.names
 		st := d.TaxonStats
 		if sec >= 0 && d.Sections[sec].TaxonStats != nil {

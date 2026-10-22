@@ -116,7 +116,8 @@ type Name struct {
 	// `Carex alba` for `C. alba`.
 	Name string `json:"name"`
 
-	// AbbrName is the input name: `C. alba`.
+	// AbbrName is the input name: `C. alba`, or its reading if its
+	// abbreviation has two capitals in the text (`C. alba` for `JC. alba`).
 	AbbrName string `json:"abbrName"`
 
 	// Start of the name in runes from the start of the document.
