@@ -2,40 +2,12 @@ package config
 
 import (
 	"log/slog"
-	"slices"
 	"strings"
 )
 
 // Option is a function that modifies Config.
 // This is the functional options pattern.
 type Option func(*Config)
-
-// OptLogFormat sets the log format.
-func OptLogFormat(s string) Option {
-	return func(c *Config) {
-		if isValidEnum("Log Format", s, []string{"json", "text", "tint"}) {
-			c.Log.Format = s
-		}
-	}
-}
-
-// OptLogLevel sets the log level.
-func OptLogLevel(s string) Option {
-	return func(c *Config) {
-		if isValidEnum("Log Level", s, []string{"debug", "info", "warn", "error"}) {
-			c.Log.Level = s
-		}
-	}
-}
-
-// OptLogDestination sets the log destination.
-func OptLogDestination(s string) Option {
-	return func(c *Config) {
-		if isValidEnum("Log Destination", s, []string{"file", "stdout", "stderr"}) {
-			c.Log.Destination = s
-		}
-	}
-}
 
 // OptGnamesURL sets the gnames REST API URL.
 func OptGnamesURL(s string) Option {
@@ -100,7 +72,6 @@ func OptThreshold(f float64) Option {
 }
 
 // OptWithFeatures asks abbr_names for raw score features.
-// Runtime-only field - not in ToOptions().
 func OptWithFeatures(b bool) Option {
 	return func(c *Config) {
 		c.WithFeatures = b
@@ -108,22 +79,9 @@ func OptWithFeatures(b bool) Option {
 }
 
 // OptWithDetails adds raw abbr_names input and output to the groups.
-// Runtime-only field - not in ToOptions().
 func OptWithDetails(b bool) Option {
 	return func(c *Config) {
 		c.WithDetails = b
-	}
-}
-
-// OptHomeDir sets the home directory for config, cache, and log locations.
-// Set once at startup from os.UserHomeDir().
-// Runtime-only field - not in ToOptions().
-func OptHomeDir(s string) Option {
-	s = strings.TrimSpace(s)
-	return func(c *Config) {
-		if isValidString("Home Directory", s) {
-			c.HomeDir = s
-		}
 	}
 }
 
@@ -144,13 +102,4 @@ func isValidInt(name string, value int) bool {
 		return false
 	}
 	return true
-}
-
-func isValidEnum(name, value string, allowed []string) bool {
-	if slices.Contains(allowed, value) {
-		return true
-	}
-	slog.Warn("Option rejected: value is not allowed",
-		"option", name, "value", value, "allowed", allowed)
-	return false
 }

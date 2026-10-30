@@ -1,8 +1,4 @@
 package gnabbr
 
-var (
-	// Version of the application
-	Version = "v0.0.1"
-	// Build timestamp
-	Build string
-)
+// Version of gnabbr.
+const Version = "v0.0.1"
