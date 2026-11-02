@@ -1,7 +1,11 @@
 github.com/gnames/gnlib v0.69.0 h1:7wuxtNRcrCVyalr+VrrIKwQN88bLOyI7DYIVhV3/2B0=
 github.com/gnames/gnlib v0.69.0/go.mod h1:hGG6yFjATLaJ44CyxGh+UjNza7gZTb41vp3KzMVoW9s=
+github.com/gnames/gnlib v0.71.0 h1:bdCK/GqpnrwZLqmpqt7okxFYKotz+E0Q/W1JcvNTb3s=
+github.com/gnames/gnlib v0.71.0/go.mod h1:7/Tvt8pSomW08dnCqGkReSUr5/l5AttcMSWqmYldMOo=
 github.com/gnames/gnstats v0.2.2 h1:EAJ87Qvsr+eOdjYgeXPXEjmH2opvAdUHQKEQ7UjG7FU=
 github.com/gnames/gnstats v0.2.2/go.mod h1:wWqpQiTICJRiFpP4jhsraMXdX4SRnRCo+AWkw1jiVvE=
+github.com/gnames/gnstats v0.2.3 h1:l7Ujgyy+E0r+GTqNUu0hgj1cxke1eJNry/h4vaCSyn4=
+github.com/gnames/gnstats v0.2.3/go.mod h1:6wM0JRePOjGlapEMmryh60lyrsX5uc8cUXqJWgataGc=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=

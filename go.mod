@@ -1,10 +1,10 @@
 module github.com/gnames/gnabbr
 
-go 1.26.0
+go 1.27.3
 
 require (
-	github.com/gnames/gnlib v0.69.0
-	github.com/gnames/gnstats v0.2.2
+	github.com/gnames/gnlib v0.71.0
+	github.com/gnames/gnstats v0.2.3
 	github.com/stretchr/testify v1.12.1
 )
 
