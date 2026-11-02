@@ -21,7 +21,7 @@ type Group struct {
 	// Prefix is the abbreviation without its period.
 	Prefix string
 
-	// Start and End are the offsets of the first and the last name.
+	// Start and End are the offsets of the start of the first and the last name.
 	Start, End int
 
 	// Members are indexes of the group's names in Document.Names, by
