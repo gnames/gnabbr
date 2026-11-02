@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## [v0.0.1] - 2026-11-02
 
 - Add: Go library that resolves abbreviated genera of scientific names in
   a document (`C. alba` -> `Carex alba`). The root package
